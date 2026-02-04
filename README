@@ -1,0 +1,36 @@
+
++     1: # Lifting Companion
++     2: 
++     3: A minimal offline-capable web app for tracking workouts.
++     4: 
++     5: ## Features
++     6: 
++     7: - **Lifting**: Log sets, reps, weight with effort indicators (🟢 easy, 🟡 medium, 🔴 hard)
++     8: - **Cardio**: Track running (with elevation), spinning, and rowing
++     9: - **History**: View all workouts organized by day
++    10: - **Trends**: See graphs of total weight lifted and distance traveled
++    11: - **Insights**: Get suggestions to increase weight based on easy effort patterns
++    12: - **Offline**: Works completely offline using service workers and local storage
++    13: 
++    14: ## Usage
++    15: 
++    16: 1. Open `index.html` in a web browser
++    17: 2. For offline use, serve via HTTP (required for service workers):
++    18:    ```bash
++    19:    python3 -m http.server 8000
++    20:    ```
++    21:    Then visit `http://localhost:8000`
++    22: 
++    23: 3. Install as PWA: Click browser's install prompt for app-like experience
++    24: 
++    25: ## Data Storage
++    26: 
++    27: All data is stored locally in browser's localStorage. No server required.
++    28: 
++    29: ## Browser Requirements
++    30: 
++    31: - Modern browser with service worker support (Chrome, Firefox, Safari, Edge)
++    32: - JavaScript enabled
++    33: - localStorage enabled
+
+Creating: /workspace/lifting-companion/README.md
