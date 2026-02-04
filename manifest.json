@@ -1,0 +1,17 @@
+
++     1: {
++     2:   "name": "Lifting Companion",
++     3:   "short_name": "Lifting",
++     4:   "start_url": "/",
++     5:   "display": "standalone",
++     6:   "background_color": "#ffffff",
++     7:   "theme_color": "#007bff",
++     8:   "icons": [
++     9:     {
++    10:       "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>💪</text></svg>",
++    11:       "sizes": "192x192",
++    12:       "type": "image/svg+xml"
++    13:     }
++    14:   ]
++    15: }
+
