@@ -216,7 +216,6 @@ function renderTrends() {
    });
    ctx.stroke();
    
-   // Insights
    const insights = generateInsights();
    document.getElementById('insights').innerHTML = '<h3>Insights</h3>' + insights.map(i => 
        `<div class="insight-item">${i}</div>`
@@ -264,11 +263,9 @@ function updateExerciseList() {
    document.getElementById('exercises').innerHTML = exercises.map(e => `<option value="${e}">`).join('');
 }
 
-// Initialize
 renderToday();
 updateExerciseList();
 
-// Service worker registration
 if ('serviceWorker' in navigator) {
-   navigator.serviceWorker.register('sw.js');
+   navigator.serviceWorker.register('./sw.js');
 }
