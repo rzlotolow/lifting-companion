@@ -1,0 +1,167 @@
+
++      1: * { margin: 0; padding: 0; box-sizing: border-box; }
++      2: 
++      3: body {
++      4:     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
++      5:     background: #f5f5f5;
++      6:     padding: 20px;
++      7: }
++      8: 
++      9: .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
++     10: 
++     11: h1 { margin-bottom: 20px; color: #333; }
++     12: h3 { margin: 20px 0 10px; color: #555; }
++     13: 
++     14: .tabs {
++     15:     display: flex;
++     16:     gap: 10px;
++     17:     margin-bottom: 20px;
++     18:     border-bottom: 2px solid #eee;
++     19: }
++     20: 
++     21: .tab {
++     22:     padding: 10px 20px;
++     23:     border: none;
++     24:     background: none;
++     25:     cursor: pointer;
++     26:     font-size: 16px;
++     27:     color: #666;
++     28:     border-bottom: 3px solid transparent;
++     29: }
++     30: 
++     31: .tab.active { color: #007bff; border-bottom-color: #007bff; }
++     32: 
++     33: .tab-content { display: none; }
++     34: .tab-content.active { display: block; }
++     35: 
++     36: .workout-type {
++     37:     display: flex;
++     38:     gap: 10px;
++     39:     margin-bottom: 20px;
++     40: }
++     41: 
++     42: .type-btn {
++     43:     flex: 1;
++     44:     padding: 12px;
++     45:     border: 2px solid #ddd;
++     46:     background: white;
++     47:     cursor: pointer;
++     48:     border-radius: 6px;
++     49:     font-size: 16px;
++     50: }
++     51: 
++     52: .type-btn.active { border-color: #007bff; background: #e7f3ff; }
++     53: 
++     54: .form-section { margin-bottom: 30px; }
++     55: .hidden { display: none !important; }
++     56: 
++     57: input, select {
++     58:     width: 100%;
++     59:     padding: 12px;
++     60:     margin-bottom: 10px;
++     61:     border: 1px solid #ddd;
++     62:     border-radius: 6px;
++     63:     font-size: 16px;
++     64: }
++     65: 
++     66: .input-row {
++     67:     display: grid;
++     68:     grid-template-columns: repeat(3, 1fr);
++     69:     gap: 10px;
++     70: }
++     71: 
++     72: .effort-selector {
++     73:     display: flex;
++     74:     gap: 10px;
++     75:     align-items: center;
++     76:     margin-bottom: 15px;
++     77: }
++     78: 
++     79: .effort-btn {
++     80:     flex: 1;
++     81:     padding: 10px;
++     82:     border: 2px solid #ddd;
++     83:     background: white;
++     84:     cursor: pointer;
++     85:     border-radius: 6px;
++     86:     font-size: 14px;
++     87: }
++     88: 
++     89: .effort-btn.selected { border-width: 3px; }
++     90: .effort-btn[data-effort="easy"].selected { border-color: #28a745; background: #d4edda; }
++     91: .effort-btn[data-effort="medium"].selected { border-color: #ffc107; background: #fff3cd; }
++     92: .effort-btn[data-effort="hard"].selected { border-color: #dc3545; background: #f8d7da; }
++     93: 
++     94: .btn-primary {
++     95:     width: 100%;
++     96:     padding: 14px;
++     97:     background: #007bff;
++     98:     color: white;
++     99:     border: none;
++    100:     border-radius: 6px;
++    101:     font-size: 16px;
++    102:     cursor: pointer;
++    103: }
++    104: 
++    105: .btn-primary:hover { background: #0056b3; }
++    106: 
++    107: .entry {
++    108:     padding: 12px;
++    109:     margin-bottom: 10px;
++    110:     background: #f8f9fa;
++    111:     border-radius: 6px;
++    112:     border-left: 4px solid #007bff;
++    113: }
++    114: 
++    115: .entry.easy { border-left-color: #28a745; }
++    116: .entry.medium { border-left-color: #ffc107; }
++    117: .entry.hard { border-left-color: #dc3545; }
++    118: 
++    119: .entry-header {
++    120:     display: flex;
++    121:     justify-content: space-between;
++    122:     font-weight: bold;
++    123:     margin-bottom: 5px;
++    124: }
++    125: 
++    126: .entry-details { color: #666; font-size: 14px; }
++    127: 
++    128: .day-section {
++    129:     margin-bottom: 30px;
++    130:     padding: 15px;
++    131:     background: #f8f9fa;
++    132:     border-radius: 8px;
++    133: }
++    134: 
++    135: .day-header {
++    136:     font-size: 18px;
++    137:     font-weight: bold;
++    138:     margin-bottom: 15px;
++    139:     color: #333;
++    140: }
++    141: 
++    142: canvas {
++    143:     max-width: 100%;
++    144:     margin: 20px 0;
++    145: }
++    146: 
++    147: #insights {
++    148:     background: #e7f3ff;
++    149:     padding: 15px;
++    150:     border-radius: 6px;
++    151:     margin-top: 20px;
++    152: }
++    153: 
++    154: .insight-item {
++    155:     margin-bottom: 10px;
++    156:     padding: 10px;
++    157:     background: white;
++    158:     border-radius: 4px;
++    159: }
++    160: 
++    161: .suggestion {
++    162:     color: #28a745;
++    163:     font-weight: bold;
++    164: }
+
+Creating: /workspace/lifting-companion/style.css
