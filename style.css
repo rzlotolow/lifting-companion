@@ -1,75 +1,164 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-   <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <title>Lifting Companion</title>
-   <link rel="stylesheet" href="style.css">
-   <link rel="manifest" href="manifest.json">
-</head>
-<body>
-   <div class="container">
-       <h1>Lifting Companion</h1>
-       
-       <nav class="tabs">
-           <button class="tab active" data-tab="log">Log Workout</button>
-           <button class="tab" data-tab="history">History</button>
-           <button class="tab" data-tab="trends">Trends</button>
-       </nav>
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-       <div id="log" class="tab-content active">
-           <div class="workout-type">
-               <button class="type-btn active" data-type="lifting">Lifting</button>
-               <button class="type-btn" data-type="cardio">Cardio</button>
-           </div>
+body {
+   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+   background: #f5f5f5;
+   padding: 20px;
+}
 
-           <div id="lifting-form" class="form-section">
-               <input type="text" id="exercise-name" placeholder="Exercise name" list="exercises">
-               <datalist id="exercises"></datalist>
-               <div class="input-row">
-                   <input type="number" id="sets" placeholder="Sets" min="1">
-                   <input type="number" id="reps" placeholder="Reps" min="1">
-                   <input type="number" id="weight" placeholder="Weight (lbs)" min="0" step="0.5">
-               </div>
-               <div class="effort-selector">
-                   <label>Effort:</label>
-                   <button class="effort-btn" data-effort="easy">🟢 Easy</button>
-                   <button class="effort-btn" data-effort="medium">🟡 Medium</button>
-                   <button class="effort-btn" data-effort="hard">🔴 Hard</button>
-               </div>
-               <button id="add-lifting" class="btn-primary">Add Exercise</button>
-           </div>
+.container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
 
-           <div id="cardio-form" class="form-section hidden">
-               <select id="cardio-type">
-                   <option value="run">Run</option>
-                   <option value="spin">Spin</option>
-                   <option value="row">Row</option>
-               </select>
-               <div class="input-row">
-                   <input type="number" id="time" placeholder="Time (min)" min="1">
-                   <input type="number" id="distance" placeholder="Distance (mi)" min="0" step="0.1">
-                   <input type="number" id="elevation" placeholder="Elevation (ft)" min="0" class="elevation-input">
-               </div>
-               <button id="add-cardio" class="btn-primary">Add Cardio</button>
-           </div>
+h1 { margin-bottom: 20px; color: #333; }
+h3 { margin: 20px 0 10px; color: #555; }
 
-           <div id="today-log">
-               <h3>Today's Workout</h3>
-               <div id="today-entries"></div>
-           </div>
-       </div>
+.tabs {
+   display: flex;
+   gap: 10px;
+   margin-bottom: 20px;
+   border-bottom: 2px solid #eee;
+}
 
-       <div id="history" class="tab-content">
-           <div id="history-list"></div>
-       </div>
+.tab {
+   padding: 10px 20px;
+   border: none;
+   background: none;
+   cursor: pointer;
+   font-size: 16px;
+   color: #666;
+   border-bottom: 3px solid transparent;
+}
 
-       <div id="trends" class="tab-content">
-           <canvas id="chart"></canvas>
-           <div id="insights"></div>
-       </div>
-   </div>
+.tab.active { color: #007bff; border-bottom-color: #007bff; }
 
-   <script src="app.js"></script>
-</body>
-</html>
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.workout-type {
+   display: flex;
+   gap: 10px;
+   margin-bottom: 20px;
+}
+
+.type-btn {
+   flex: 1;
+   padding: 12px;
+   border: 2px solid #ddd;
+   background: white;
+   cursor: pointer;
+   border-radius: 6px;
+   font-size: 16px;
+}
+
+.type-btn.active { border-color: #007bff; background: #e7f3ff; }
+
+.form-section { margin-bottom: 30px; }
+.hidden { display: none !important; }
+
+input, select {
+   width: 100%;
+   padding: 12px;
+   margin-bottom: 10px;
+   border: 1px solid #ddd;
+   border-radius: 6px;
+   font-size: 16px;
+}
+
+.input-row {
+   display: grid;
+   grid-template-columns: repeat(3, 1fr);
+   gap: 10px;
+}
+
+.effort-selector {
+   display: flex;
+   gap: 10px;
+   align-items: center;
+   margin-bottom: 15px;
+}
+
+.effort-btn {
+   flex: 1;
+   padding: 10px;
+   border: 2px solid #ddd;
+   background: white;
+   cursor: pointer;
+   border-radius: 6px;
+   font-size: 14px;
+}
+
+.effort-btn.selected { border-width: 3px; }
+.effort-btn[data-effort="easy"].selected { border-color: #28a745; background: #d4edda; }
+.effort-btn[data-effort="medium"].selected { border-color: #ffc107; background: #fff3cd; }
+.effort-btn[data-effort="hard"].selected { border-color: #dc3545; background: #f8d7da; }
+
+.btn-primary {
+   width: 100%;
+   padding: 14px;
+   background: #007bff;
+   color: white;
+   border: none;
+   border-radius: 6px;
+   font-size: 16px;
+   cursor: pointer;
+}
+
+.btn-primary:hover { background: #0056b3; }
+
+.entry {
+   padding: 12px;
+   margin-bottom: 10px;
+   background: #f8f9fa;
+   border-radius: 6px;
+   border-left: 4px solid #007bff;
+}
+
+.entry.easy { border-left-color: #28a745; }
+.entry.medium { border-left-color: #ffc107; }
+.entry.hard { border-left-color: #dc3545; }
+
+.entry-header {
+   display: flex;
+   justify-content: space-between;
+   font-weight: bold;
+   margin-bottom: 5px;
+}
+
+.entry-details { color: #666; font-size: 14px; }
+
+.day-section {
+   margin-bottom: 30px;
+   padding: 15px;
+   background: #f8f9fa;
+   border-radius: 8px;
+}
+
+.day-header {
+   font-size: 18px;
+   font-weight: bold;
+   margin-bottom: 15px;
+   color: #333;
+}
+
+canvas {
+   max-width: 100%;
+   margin: 20px 0;
+}
+
+#insights {
+   background: #e7f3ff;
+   padding: 15px;
+   border-radius: 6px;
+   margin-top: 20px;
+}
+
+.insight-item {
+   margin-bottom: 10px;
+   padding: 10px;
+   background: white;
+   border-radius: 4px;
+}
+
+.suggestion {
+   color: #28a745;
+   font-weight: bold;
+}
