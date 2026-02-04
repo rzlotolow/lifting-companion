@@ -1,164 +1,274 @@
-* { margin: 0; padding: 0; box-sizing: border-box; }
+const DB_KEY = 'workouts';
+let selectedEffort = 'medium';
+let workouts = JSON.parse(localStorage.getItem(DB_KEY)) || [];
 
-body {
-   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-   background: #f5f5f5;
-   padding: 20px;
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+   tab.addEventListener('click', () => {
+       document.querySelectorAll('.tab, .tab-content').forEach(el => el.classList.remove('active'));
+       tab.classList.add('active');
+       document.getElementById(tab.dataset.tab).classList.add('active');
+       if (tab.dataset.tab === 'history') renderHistory();
+       if (tab.dataset.tab === 'trends') renderTrends();
+   });
+});
+
+// Workout type switching
+document.querySelectorAll('.type-btn').forEach(btn => {
+   btn.addEventListener('click', () => {
+       document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+       btn.classList.add('active');
+       document.getElementById('lifting-form').classList.toggle('hidden', btn.dataset.type !== 'lifting');
+       document.getElementById('cardio-form').classList.toggle('hidden', btn.dataset.type !== 'cardio');
+   });
+});
+
+// Effort selection
+document.querySelectorAll('.effort-btn').forEach(btn => {
+   btn.addEventListener('click', () => {
+       document.querySelectorAll('.effort-btn').forEach(b => b.classList.remove('selected'));
+       btn.classList.add('selected');
+       selectedEffort = btn.dataset.effort;
+   });
+});
+document.querySelector('.effort-btn[data-effort="medium"]').classList.add('selected');
+
+// Cardio type change
+document.getElementById('cardio-type').addEventListener('change', (e) => {
+   document.querySelector('.elevation-input').style.display = e.target.value === 'run' ? 'block' : 'none';
+});
+
+// Add lifting
+document.getElementById('add-lifting').addEventListener('click', () => {
+   const name = document.getElementById('exercise-name').value.trim();
+   const sets = parseInt(document.getElementById('sets').value);
+   const reps = parseInt(document.getElementById('reps').value);
+   const weight = parseFloat(document.getElementById('weight').value);
+   
+   if (!name || !sets || !reps || weight < 0) return alert('Fill all fields');
+   
+   const workout = {
+       type: 'lifting',
+       name,
+       sets,
+       reps,
+       weight,
+       effort: selectedEffort,
+       date: new Date().toISOString().split('T')[0],
+       timestamp: Date.now()
+   };
+   
+   workouts.push(workout);
+   save();
+   clearLiftingForm();
+   renderToday();
+   updateExerciseList();
+});
+
+// Add cardio
+document.getElementById('add-cardio').addEventListener('click', () => {
+   const cardioType = document.getElementById('cardio-type').value;
+   const time = parseInt(document.getElementById('time').value);
+   const distance = parseFloat(document.getElementById('distance').value);
+   const elevation = cardioType === 'run' ? parseInt(document.getElementById('elevation').value) || 0 : 0;
+   
+   if (!time || !distance) return alert('Fill all fields');
+   
+   const workout = {
+       type: 'cardio',
+       cardioType,
+       time,
+       distance,
+       elevation,
+       date: new Date().toISOString().split('T')[0],
+       timestamp: Date.now()
+   };
+   
+   workouts.push(workout);
+   save();
+   clearCardioForm();
+   renderToday();
+});
+
+function save() {
+   localStorage.setItem(DB_KEY, JSON.stringify(workouts));
 }
 
-.container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
-
-h1 { margin-bottom: 20px; color: #333; }
-h3 { margin: 20px 0 10px; color: #555; }
-
-.tabs {
-   display: flex;
-   gap: 10px;
-   margin-bottom: 20px;
-   border-bottom: 2px solid #eee;
+function clearLiftingForm() {
+   document.getElementById('exercise-name').value = '';
+   document.getElementById('sets').value = '';
+   document.getElementById('reps').value = '';
+   document.getElementById('weight').value = '';
 }
 
-.tab {
-   padding: 10px 20px;
-   border: none;
-   background: none;
-   cursor: pointer;
-   font-size: 16px;
-   color: #666;
-   border-bottom: 3px solid transparent;
+function clearCardioForm() {
+   document.getElementById('time').value = '';
+   document.getElementById('distance').value = '';
+   document.getElementById('elevation').value = '';
 }
 
-.tab.active { color: #007bff; border-bottom-color: #007bff; }
-
-.tab-content { display: none; }
-.tab-content.active { display: block; }
-
-.workout-type {
-   display: flex;
-   gap: 10px;
-   margin-bottom: 20px;
+function renderToday() {
+   const today = new Date().toISOString().split('T')[0];
+   const todayWorkouts = workouts.filter(w => w.date === today);
+   const container = document.getElementById('today-entries');
+   
+   if (todayWorkouts.length === 0) {
+       container.innerHTML = '<p style="color: #999;">No workouts logged today</p>';
+       return;
+   }
+   
+   container.innerHTML = todayWorkouts.map(w => {
+       if (w.type === 'lifting') {
+           return `<div class="entry ${w.effort}">
+               <div class="entry-header">
+                   <span>${w.name}</span>
+                   <span>${w.sets}×${w.reps} @ ${w.weight}lbs</span>
+               </div>
+               <div class="entry-details">Total: ${w.sets * w.reps * w.weight}lbs</div>
+           </div>`;
+       } else {
+           const elevText = w.elevation ? `, ${w.elevation}ft` : '';
+           return `<div class="entry">
+               <div class="entry-header">
+                   <span>${w.cardioType.toUpperCase()}</span>
+                   <span>${w.distance}mi in ${w.time}min</span>
+               </div>
+               <div class="entry-details">Pace: ${(w.time / w.distance).toFixed(1)} min/mi${elevText}</div>
+           </div>`;
+       }
+   }).join('');
 }
 
-.type-btn {
-   flex: 1;
-   padding: 12px;
-   border: 2px solid #ddd;
-   background: white;
-   cursor: pointer;
-   border-radius: 6px;
-   font-size: 16px;
+function renderHistory() {
+   const byDate = {};
+   workouts.forEach(w => {
+       if (!byDate[w.date]) byDate[w.date] = [];
+       byDate[w.date].push(w);
+   });
+   
+   const dates = Object.keys(byDate).sort().reverse();
+   const container = document.getElementById('history-list');
+   
+   if (dates.length === 0) {
+       container.innerHTML = '<p style="color: #999;">No workout history</p>';
+       return;
+   }
+   
+   container.innerHTML = dates.map(date => {
+       const entries = byDate[date].map(w => {
+           if (w.type === 'lifting') {
+               return `<div class="entry ${w.effort}">
+                   <div class="entry-header">
+                       <span>${w.name}</span>
+                       <span>${w.sets}×${w.reps} @ ${w.weight}lbs</span>
+                   </div>
+               </div>`;
+           } else {
+               return `<div class="entry">
+                   <div class="entry-header">
+                       <span>${w.cardioType.toUpperCase()}</span>
+                       <span>${w.distance}mi in ${w.time}min</span>
+                   </div>
+               </div>`;
+           }
+       }).join('');
+       
+       return `<div class="day-section">
+           <div class="day-header">${new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+           ${entries}
+       </div>`;
+   }).join('');
 }
 
-.type-btn.active { border-color: #007bff; background: #e7f3ff; }
-
-.form-section { margin-bottom: 30px; }
-.hidden { display: none !important; }
-
-input, select {
-   width: 100%;
-   padding: 12px;
-   margin-bottom: 10px;
-   border: 1px solid #ddd;
-   border-radius: 6px;
-   font-size: 16px;
+function renderTrends() {
+   const canvas = document.getElementById('chart');
+   const ctx = canvas.getContext('2d');
+   canvas.width = canvas.offsetWidth;
+   canvas.height = 300;
+   
+   const byDate = {};
+   workouts.forEach(w => {
+       if (!byDate[w.date]) byDate[w.date] = { weight: 0, distance: 0 };
+       if (w.type === 'lifting') byDate[w.date].weight += w.sets * w.reps * w.weight;
+       if (w.type === 'cardio') byDate[w.date].distance += w.distance;
+   });
+   
+   const dates = Object.keys(byDate).sort();
+   if (dates.length === 0) {
+       ctx.fillText('No data to display', canvas.width / 2 - 50, canvas.height / 2);
+       document.getElementById('insights').innerHTML = '<p>Log workouts to see insights</p>';
+       return;
+   }
+   
+   const weights = dates.map(d => byDate[d].weight);
+   const maxWeight = Math.max(...weights, 1);
+   
+   ctx.clearRect(0, 0, canvas.width, canvas.height);
+   ctx.strokeStyle = '#007bff';
+   ctx.lineWidth = 2;
+   ctx.beginPath();
+   
+   dates.forEach((date, i) => {
+       const x = (i / (dates.length - 1 || 1)) * (canvas.width - 40) + 20;
+       const y = canvas.height - 40 - (weights[i] / maxWeight) * (canvas.height - 60);
+       if (i === 0) ctx.moveTo(x, y);
+       else ctx.lineTo(x, y);
+   });
+   ctx.stroke();
+   
+   // Insights
+   const insights = generateInsights();
+   document.getElementById('insights').innerHTML = '<h3>Insights</h3>' + insights.map(i => 
+       `<div class="insight-item">${i}</div>`
+   ).join('');
 }
 
-.input-row {
-   display: grid;
-   grid-template-columns: repeat(3, 1fr);
-   gap: 10px;
+function generateInsights() {
+   const insights = [];
+   const liftingByExercise = {};
+   
+   workouts.filter(w => w.type === 'lifting').forEach(w => {
+       if (!liftingByExercise[w.name]) liftingByExercise[w.name] = [];
+       liftingByExercise[w.name].push(w);
+   });
+   
+   Object.keys(liftingByExercise).forEach(exercise => {
+       const exercises = liftingByExercise[exercise].sort((a, b) => a.timestamp - b.timestamp);
+       const recent = exercises.slice(-5);
+       const easyCount = recent.filter(e => e.effort === 'easy').length;
+       
+       if (easyCount >= 3) {
+           insights.push(`<span class="suggestion">💪 Consider increasing weight for ${exercise}</span> - You've had ${easyCount} easy sessions recently`);
+       }
+       
+       if (exercises.length >= 2) {
+           const latest = exercises[exercises.length - 1];
+           const previous = exercises[exercises.length - 2];
+           if (latest.weight > previous.weight) {
+               insights.push(`🎉 Progress on ${exercise}! Up from ${previous.weight}lbs to ${latest.weight}lbs`);
+           }
+       }
+   });
+   
+   const totalWeight = workouts.filter(w => w.type === 'lifting').reduce((sum, w) => sum + w.sets * w.reps * w.weight, 0);
+   const totalDistance = workouts.filter(w => w.type === 'cardio').reduce((sum, w) => sum + w.distance, 0);
+   
+   insights.push(`📊 Total weight lifted: ${totalWeight.toLocaleString()}lbs`);
+   insights.push(`🏃 Total distance: ${totalDistance.toFixed(1)}mi`);
+   
+   return insights.length > 0 ? insights : ['Keep logging workouts to see insights!'];
 }
 
-.effort-selector {
-   display: flex;
-   gap: 10px;
-   align-items: center;
-   margin-bottom: 15px;
+function updateExerciseList() {
+   const exercises = [...new Set(workouts.filter(w => w.type === 'lifting').map(w => w.name))];
+   document.getElementById('exercises').innerHTML = exercises.map(e => `<option value="${e}">`).join('');
 }
 
-.effort-btn {
-   flex: 1;
-   padding: 10px;
-   border: 2px solid #ddd;
-   background: white;
-   cursor: pointer;
-   border-radius: 6px;
-   font-size: 14px;
-}
+// Initialize
+renderToday();
+updateExerciseList();
 
-.effort-btn.selected { border-width: 3px; }
-.effort-btn[data-effort="easy"].selected { border-color: #28a745; background: #d4edda; }
-.effort-btn[data-effort="medium"].selected { border-color: #ffc107; background: #fff3cd; }
-.effort-btn[data-effort="hard"].selected { border-color: #dc3545; background: #f8d7da; }
-
-.btn-primary {
-   width: 100%;
-   padding: 14px;
-   background: #007bff;
-   color: white;
-   border: none;
-   border-radius: 6px;
-   font-size: 16px;
-   cursor: pointer;
-}
-
-.btn-primary:hover { background: #0056b3; }
-
-.entry {
-   padding: 12px;
-   margin-bottom: 10px;
-   background: #f8f9fa;
-   border-radius: 6px;
-   border-left: 4px solid #007bff;
-}
-
-.entry.easy { border-left-color: #28a745; }
-.entry.medium { border-left-color: #ffc107; }
-.entry.hard { border-left-color: #dc3545; }
-
-.entry-header {
-   display: flex;
-   justify-content: space-between;
-   font-weight: bold;
-   margin-bottom: 5px;
-}
-
-.entry-details { color: #666; font-size: 14px; }
-
-.day-section {
-   margin-bottom: 30px;
-   padding: 15px;
-   background: #f8f9fa;
-   border-radius: 8px;
-}
-
-.day-header {
-   font-size: 18px;
-   font-weight: bold;
-   margin-bottom: 15px;
-   color: #333;
-}
-
-canvas {
-   max-width: 100%;
-   margin: 20px 0;
-}
-
-#insights {
-   background: #e7f3ff;
-   padding: 15px;
-   border-radius: 6px;
-   margin-top: 20px;
-}
-
-.insight-item {
-   margin-bottom: 10px;
-   padding: 10px;
-   background: white;
-   border-radius: 4px;
-}
-
-.suggestion {
-   color: #28a745;
-   font-weight: bold;
+// Service worker registration
+if ('serviceWorker' in navigator) {
+   navigator.serviceWorker.register('sw.js');
 }
