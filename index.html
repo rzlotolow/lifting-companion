@@ -1,0 +1,78 @@
+
++     1: <!DOCTYPE html>
++     2: <html lang="en">
++     3: <head>
++     4:     <meta charset="UTF-8">
++     5:     <meta name="viewport" content="width=device-width, initial-scale=1.0">
++     6:     <title>Lifting Companion</title>
++     7:     <link rel="stylesheet" href="style.css">
++     8:     <link rel="manifest" href="manifest.json">
++     9: </head>
++    10: <body>
++    11:     <div class="container">
++    12:         <h1>Lifting Companion</h1>
++    13:         
++    14:         <nav class="tabs">
++    15:             <button class="tab active" data-tab="log">Log Workout</button>
++    16:             <button class="tab" data-tab="history">History</button>
++    17:             <button class="tab" data-tab="trends">Trends</button>
++    18:         </nav>
++    19: 
++    20:         <div id="log" class="tab-content active">
++    21:             <div class="workout-type">
++    22:                 <button class="type-btn active" data-type="lifting">Lifting</button>
++    23:                 <button class="type-btn" data-type="cardio">Cardio</button>
++    24:             </div>
++    25: 
++    26:             <div id="lifting-form" class="form-section">
++    27:                 <input type="text" id="exercise-name" placeholder="Exercise name" list="exercises">
++    28:                 <datalist id="exercises"></datalist>
++    29:                 <div class="input-row">
++    30:                     <input type="number" id="sets" placeholder="Sets" min="1">
++    31:                     <input type="number" id="reps" placeholder="Reps" min="1">
++    32:                     <input type="number" id="weight" placeholder="Weight (lbs)" min="0" step="0.5">
++    33:                 </div>
++    34:                 <div class="effort-selector">
++    35:                     <label>Effort:</label>
++    36:                     <button class="effort-btn" data-effort="easy">🟢 Easy</button>
++    37:                     <button class="effort-btn" data-effort="medium">🟡 Medium</button>
++    38:                     <button class="effort-btn" data-effort="hard">🔴 Hard</button>
++    39:                 </div>
++    40:                 <button id="add-lifting" class="btn-primary">Add Exercise</button>
++    41:             </div>
++    42: 
++    43:             <div id="cardio-form" class="form-section hidden">
++    44:                 <select id="cardio-type">
++    45:                     <option value="run">Run</option>
++    46:                     <option value="spin">Spin</option>
++    47:                     <option value="row">Row</option>
++    48:                 </select>
++    49:                 <div class="input-row">
++    50:                     <input type="number" id="time" placeholder="Time (min)" min="1">
++    51:                     <input type="number" id="distance" placeholder="Distance (mi)" min="0" step="0.1">
++    52:                     <input type="number" id="elevation" placeholder="Elevation (ft)" min="0" class="elevation-input">
++    53:                 </div>
++    54:                 <button id="add-cardio" class="btn-primary">Add Cardio</button>
++    55:             </div>
++    56: 
++    57:             <div id="today-log">
++    58:                 <h3>Today's Workout</h3>
++    59:                 <div id="today-entries"></div>
++    60:             </div>
++    61:         </div>
++    62: 
++    63:         <div id="history" class="tab-content">
++    64:             <div id="history-list"></div>
++    65:         </div>
++    66: 
++    67:         <div id="trends" class="tab-content">
++    68:             <canvas id="chart"></canvas>
++    69:             <div id="insights"></div>
++    70:         </div>
++    71:     </div>
++    72: 
++    73:     <script src="app.js"></script>
++    74: </body>
++    75: </html>
+
+Creating: /workspace/lifting-companion/index.html
