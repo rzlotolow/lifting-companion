@@ -46,9 +46,9 @@
                    <option value="spin">Spin</option>
                    <option value="row">Row</option>
                </select>
-               <div class="input-row">
+               <div class="input-row" id="cardio-inputs">
                    <input type="number" id="time" placeholder="Time (min)" min="1">
-                   <input type="number" id="distance" placeholder="Distance (mi)" min="0" step="0.1">
+                   <input type="number" id="distance" placeholder="Distance" min="0" step="0.1">
                    <input type="number" id="elevation" placeholder="Elevation (ft)" min="0" class="elevation-input">
                </div>
                <button id="add-cardio" class="btn-primary">Add Cardio</button>
@@ -67,6 +67,17 @@
        <div id="trends" class="tab-content">
            <canvas id="chart"></canvas>
            <div id="insights"></div>
+       </div>
+   </div>
+
+   <div id="edit-modal" class="modal hidden">
+       <div class="modal-content">
+           <h3>Edit Workout</h3>
+           <div id="edit-form"></div>
+           <div class="modal-buttons">
+               <button id="save-edit" class="btn-primary">Save</button>
+               <button id="cancel-edit" class="btn-secondary">Cancel</button>
+           </div>
        </div>
    </div>
 
