@@ -1,6 +1,7 @@
 const DB_KEY = 'workouts';
 let selectedEffort = 'medium';
 let workouts = JSON.parse(localStorage.getItem(DB_KEY)) || [];
+let editingIndex = null;
 
 // Tab switching
 document.querySelectorAll('.tab').forEach(tab => {
@@ -35,7 +36,19 @@ document.querySelector('.effort-btn[data-effort="medium"]').classList.add('selec
 
 // Cardio type change
 document.getElementById('cardio-type').addEventListener('change', (e) => {
-   document.querySelector('.elevation-input').style.display = e.target.value === 'run' ? 'block' : 'none';
+   const distanceInput = document.getElementById('distance');
+   const elevationInput = document.querySelector('.elevation-input');
+   
+   if (e.target.value === 'row') {
+       distanceInput.placeholder = 'Distance (m)';
+       elevationInput.style.display = 'none';
+   } else if (e.target.value === 'run') {
+       distanceInput.placeholder = 'Distance (mi)';
+       elevationInput.style.display = 'block';
+   } else {
+       distanceInput.placeholder = 'Distance (mi)';
+       elevationInput.style.display = 'none';
+   }
 });
 
 // Add lifting
@@ -90,6 +103,85 @@ document.getElementById('add-cardio').addEventListener('click', () => {
    renderToday();
 });
 
+// Edit modal handlers
+document.getElementById('cancel-edit').addEventListener('click', () => {
+   document.getElementById('edit-modal').classList.add('hidden');
+   editingIndex = null;
+});
+
+document.getElementById('save-edit').addEventListener('click', () => {
+   if (editingIndex === null) return;
+   
+   const workout = workouts[editingIndex];
+   
+   if (workout.type === 'lifting') {
+       workout.name = document.getElementById('edit-name').value.trim();
+       workout.sets = parseInt(document.getElementById('edit-sets').value);
+       workout.reps = parseInt(document.getElementById('edit-reps').value);
+       workout.weight = parseFloat(document.getElementById('edit-weight').value);
+       workout.effort = document.querySelector('input[name="edit-effort"]:checked').value;
+   } else {
+       workout.time = parseInt(document.getElementById('edit-time').value);
+       workout.distance = parseFloat(document.getElementById('edit-distance').value);
+       if (workout.cardioType === 'run') {
+           workout.elevation = parseInt(document.getElementById('edit-elevation').value) || 0;
+       }
+   }
+   
+   save();
+   document.getElementById('edit-modal').classList.add('hidden');
+   editingIndex = null;
+   renderToday();
+   renderHistory();
+});
+
+function showEditModal(index) {
+   editingIndex = index;
+   const workout = workouts[index];
+   const form = document.getElementById('edit-form');
+   
+   if (workout.type === 'lifting') {
+       form.innerHTML = `
+           <input type="text" id="edit-name" value="${workout.name}" placeholder="Exercise name">
+           <div class="input-row">
+               <input type="number" id="edit-sets" value="${workout.sets}" placeholder="Sets" min="1">
+               <input type="number" id="edit-reps" value="${workout.reps}" placeholder="Reps" min="1">
+               <input type="number" id="edit-weight" value="${workout.weight}" placeholder="Weight (lbs)" min="0" step="0.5">
+           </div>
+           <div class="effort-selector">
+               <label>Effort:</label>
+               <label><input type="radio" name="edit-effort" value="easy" ${workout.effort === 'easy' ? 'checked' : ''}> 🟢 Easy</label>
+               <label><input type="radio" name="edit-effort" value="medium" ${workout.effort === 'medium' ? 'checked' : ''}> 🟡 Medium</label>
+               <label><input type="radio" name="edit-effort" value="hard" ${workout.effort === 'hard' ? 'checked' : ''}> 🔴 Hard</label>
+           </div>
+       `;
+   } else {
+       const distUnit = workout.cardioType === 'row' ? 'm' : 'mi';
+       const elevField = workout.cardioType === 'run' ? 
+           `<input type="number" id="edit-elevation" value="${workout.elevation}" placeholder="Elevation (ft)" min="0">` : '';
+       
+       form.innerHTML = `
+           <p><strong>${workout.cardioType.toUpperCase()}</strong></p>
+           <div class="input-row">
+               <input type="number" id="edit-time" value="${workout.time}" placeholder="Time (min)" min="1">
+               <input type="number" id="edit-distance" value="${workout.distance}" placeholder="Distance (${distUnit})" min="0" step="0.1">
+               ${elevField}
+           </div>
+       `;
+   }
+   
+   document.getElementById('edit-modal').classList.remove('hidden');
+}
+
+function deleteWorkout(index) {
+   if (confirm('Delete this workout?')) {
+       workouts.splice(index, 1);
+       save();
+       renderToday();
+       renderHistory();
+   }
+}
+
 function save() {
    localStorage.setItem(DB_KEY, JSON.stringify(workouts));
 }
@@ -109,7 +201,7 @@ function clearCardioForm() {
 
 function renderToday() {
    const today = new Date().toISOString().split('T')[0];
-   const todayWorkouts = workouts.filter(w => w.date === today);
+   const todayWorkouts = workouts.map((w, i) => ({ ...w, index: i })).filter(w => w.date === today);
    const container = document.getElementById('today-entries');
    
    if (todayWorkouts.length === 0) {
@@ -125,15 +217,28 @@ function renderToday() {
                    <span>${w.sets}×${w.reps} @ ${w.weight}lbs</span>
                </div>
                <div class="entry-details">Total: ${w.sets * w.reps * w.weight}lbs</div>
+               <div class="entry-actions">
+                   <button onclick="showEditModal(${w.index})" class="btn-edit">✏️ Edit</button>
+                   <button onclick="deleteWorkout(${w.index})" class="btn-delete">🗑️ Delete</button>
+               </div>
            </div>`;
        } else {
+           const distUnit = w.cardioType === 'row' ? 'm' : 'mi';
            const elevText = w.elevation ? `, ${w.elevation}ft` : '';
+           const pace = w.cardioType === 'row' ? 
+               `${(w.time / (w.distance / 500)).toFixed(1)} min/500m` :
+               `${(w.time / w.distance).toFixed(1)} min/mi`;
+           
            return `<div class="entry">
                <div class="entry-header">
                    <span>${w.cardioType.toUpperCase()}</span>
-                   <span>${w.distance}mi in ${w.time}min</span>
+                   <span>${w.distance}${distUnit} in ${w.time}min</span>
                </div>
-               <div class="entry-details">Pace: ${(w.time / w.distance).toFixed(1)} min/mi${elevText}</div>
+               <div class="entry-details">Pace: ${pace}${elevText}</div>
+               <div class="entry-actions">
+                   <button onclick="showEditModal(${w.index})" class="btn-edit">✏️ Edit</button>
+                   <button onclick="deleteWorkout(${w.index})" class="btn-delete">🗑️ Delete</button>
+               </div>
            </div>`;
        }
    }).join('');
@@ -141,9 +246,9 @@ function renderToday() {
 
 function renderHistory() {
    const byDate = {};
-   workouts.forEach(w => {
+   workouts.forEach((w, i) => {
        if (!byDate[w.date]) byDate[w.date] = [];
-       byDate[w.date].push(w);
+       byDate[w.date].push({ ...w, index: i });
    });
    
    const dates = Object.keys(byDate).sort().reverse();
@@ -162,12 +267,21 @@ function renderHistory() {
                        <span>${w.name}</span>
                        <span>${w.sets}×${w.reps} @ ${w.weight}lbs</span>
                    </div>
+                   <div class="entry-actions">
+                       <button onclick="showEditModal(${w.index})" class="btn-edit">✏️</button>
+                       <button onclick="deleteWorkout(${w.index})" class="btn-delete">🗑️</button>
+                   </div>
                </div>`;
            } else {
+               const distUnit = w.cardioType === 'row' ? 'm' : 'mi';
                return `<div class="entry">
                    <div class="entry-header">
                        <span>${w.cardioType.toUpperCase()}</span>
-                       <span>${w.distance}mi in ${w.time}min</span>
+                       <span>${w.distance}${distUnit} in ${w.time}min</span>
+                   </div>
+                   <div class="entry-actions">
+                       <button onclick="showEditModal(${w.index})" class="btn-edit">✏️</button>
+                       <button onclick="deleteWorkout(${w.index})" class="btn-delete">🗑️</button>
                    </div>
                </div>`;
            }
@@ -190,7 +304,10 @@ function renderTrends() {
    workouts.forEach(w => {
        if (!byDate[w.date]) byDate[w.date] = { weight: 0, distance: 0 };
        if (w.type === 'lifting') byDate[w.date].weight += w.sets * w.reps * w.weight;
-       if (w.type === 'cardio') byDate[w.date].distance += w.distance;
+       if (w.type === 'cardio') {
+           const distInMiles = w.cardioType === 'row' ? w.distance / 1609.34 : w.distance;
+           byDate[w.date].distance += distInMiles;
+       }
    });
    
    const dates = Object.keys(byDate).sort();
@@ -250,7 +367,10 @@ function generateInsights() {
    });
    
    const totalWeight = workouts.filter(w => w.type === 'lifting').reduce((sum, w) => sum + w.sets * w.reps * w.weight, 0);
-   const totalDistance = workouts.filter(w => w.type === 'cardio').reduce((sum, w) => sum + w.distance, 0);
+   const totalDistance = workouts.filter(w => w.type === 'cardio').reduce((sum, w) => {
+       const distInMiles = w.cardioType === 'row' ? w.distance / 1609.34 : w.distance;
+       return sum + distInMiles;
+   }, 0);
    
    insights.push(`📊 Total weight lifted: ${totalWeight.toLocaleString()}lbs`);
    insights.push(`🏃 Total distance: ${totalDistance.toFixed(1)}mi`);
