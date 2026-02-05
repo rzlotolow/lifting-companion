@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const firebaseConfig = {
    apiKey: "AIzaSyBWOb8ITzTaKWP2nKtFE2O0TBdnW7Q1XN4",
@@ -19,22 +19,42 @@ let selectedEffort = 'medium';
 let workouts = [];
 let editingId = null;
 let currentUser = null;
+let unsubscribe = null;
 
-// Auth state
 onAuthStateChanged(auth, (user) => {
    if (user) {
        currentUser = user;
        document.getElementById('auth-screen').classList.add('hidden');
        document.getElementById('app').classList.remove('hidden');
-       loadWorkouts();
+       setupRealtimeSync();
    } else {
        currentUser = null;
+       if (unsubscribe) unsubscribe();
        document.getElementById('auth-screen').classList.remove('hidden');
        document.getElementById('app').classList.add('hidden');
    }
 });
 
-// Google sign in
+function setupRealtimeSync() {
+   const q = query(
+       collection(db, 'workouts'),
+       where('userId', '==', currentUser.uid),
+       orderBy('timestamp', 'desc')
+   );
+   
+   unsubscribe = onSnapshot(q, (snapshot) => {
+       workouts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+       renderToday();
+       updateExerciseList();
+       if (document.getElementById('history').classList.contains('active')) {
+           renderHistory();
+       }
+       if (document.getElementById('trends').classList.contains('active')) {
+           renderTrends();
+       }
+   });
+}
+
 document.getElementById('google-signin').addEventListener('click', async () => {
    const provider = new GoogleAuthProvider();
    try {
@@ -44,26 +64,11 @@ document.getElementById('google-signin').addEventListener('click', async () => {
    }
 });
 
-// Sign out
 document.getElementById('signout-btn').addEventListener('click', async () => {
    await signOut(auth);
    workouts = [];
 });
 
-// Load workouts from Firestore
-async function loadWorkouts() {
-   const q = query(
-       collection(db, 'workouts'),
-       where('userId', '==', currentUser.uid),
-       orderBy('timestamp', 'desc')
-   );
-   const snapshot = await getDocs(q);
-   workouts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-   renderToday();
-   updateExerciseList();
-}
-
-// Tab switching
 document.querySelectorAll('.tab').forEach(tab => {
    tab.addEventListener('click', () => {
        document.querySelectorAll('.tab, .tab-content').forEach(el => el.classList.remove('active'));
@@ -74,7 +79,6 @@ document.querySelectorAll('.tab').forEach(tab => {
    });
 });
 
-// Workout type switching
 document.querySelectorAll('.type-btn').forEach(btn => {
    btn.addEventListener('click', () => {
        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
@@ -84,7 +88,6 @@ document.querySelectorAll('.type-btn').forEach(btn => {
    });
 });
 
-// Effort selection
 document.querySelectorAll('.effort-btn').forEach(btn => {
    btn.addEventListener('click', () => {
        document.querySelectorAll('.effort-btn').forEach(b => b.classList.remove('selected'));
@@ -94,7 +97,6 @@ document.querySelectorAll('.effort-btn').forEach(btn => {
 });
 document.querySelector('.effort-btn[data-effort="medium"]').classList.add('selected');
 
-// Cardio type change
 document.getElementById('cardio-type').addEventListener('change', (e) => {
    const distanceInput = document.getElementById('distance');
    const elevationInput = document.querySelector('.elevation-input');
@@ -111,7 +113,6 @@ document.getElementById('cardio-type').addEventListener('change', (e) => {
    }
 });
 
-// Add lifting
 document.getElementById('add-lifting').addEventListener('click', async () => {
    const name = document.getElementById('exercise-name').value.trim();
    const sets = parseInt(document.getElementById('sets').value);
@@ -132,14 +133,10 @@ document.getElementById('add-lifting').addEventListener('click', async () => {
        userId: currentUser.uid
    };
    
-   const docRef = await addDoc(collection(db, 'workouts'), workout);
-   workouts.unshift({ id: docRef.id, ...workout });
+   await addDoc(collection(db, 'workouts'), workout);
    clearLiftingForm();
-   renderToday();
-   updateExerciseList();
 });
 
-// Add cardio
 document.getElementById('add-cardio').addEventListener('click', async () => {
    const cardioType = document.getElementById('cardio-type').value;
    const time = parseInt(document.getElementById('time').value);
@@ -159,13 +156,10 @@ document.getElementById('add-cardio').addEventListener('click', async () => {
        userId: currentUser.uid
    };
    
-   const docRef = await addDoc(collection(db, 'workouts'), workout);
-   workouts.unshift({ id: docRef.id, ...workout });
+   await addDoc(collection(db, 'workouts'), workout);
    clearCardioForm();
-   renderToday();
 });
 
-// Edit modal handlers
 document.getElementById('cancel-edit').addEventListener('click', () => {
    document.getElementById('edit-modal').classList.add('hidden');
    editingId = null;
@@ -192,12 +186,9 @@ document.getElementById('save-edit').addEventListener('click', async () => {
    }
    
    await updateDoc(doc(db, 'workouts', editingId), updates);
-   Object.assign(workout, updates);
    
    document.getElementById('edit-modal').classList.add('hidden');
    editingId = null;
-   renderToday();
-   renderHistory();
 });
 
 window.showEditModal = function(id) {
@@ -241,9 +232,6 @@ window.showEditModal = function(id) {
 window.deleteWorkout = async function(id) {
    if (confirm('Delete this workout?')) {
        await deleteDoc(doc(db, 'workouts', id));
-       workouts = workouts.filter(w => w.id !== id);
-       renderToday();
-       renderHistory();
    }
 };
 
