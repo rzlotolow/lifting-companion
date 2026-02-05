@@ -40,6 +40,7 @@ function setupRealtimeSync() {
    const q = query(
        collection(db, 'workouts'),
        where('userId', '==', currentUser.uid),
+       where('is_deleted', '==', 'N'),
        orderBy('timestamp', 'desc')
    );
    
@@ -165,7 +166,8 @@ document.getElementById('add-lifting').addEventListener('click', async () => {
        effort: selectedLiftingEffort,
        date: new Date().toISOString().split('T')[0],
        timestamp: Date.now(),
-       userId: currentUser.uid
+       userId: currentUser.uid,
+       is_deleted: 'N'
    };
    
    await addDoc(collection(db, 'workouts'), workout);
@@ -191,7 +193,8 @@ document.getElementById('add-core').addEventListener('click', async () => {
        effort: selectedCoreEffort,
        date: new Date().toISOString().split('T')[0],
        timestamp: Date.now(),
-       userId: currentUser.uid
+       userId: currentUser.uid,
+       is_deleted: 'N'
    };
    
    await addDoc(collection(db, 'workouts'), workout);
@@ -212,7 +215,8 @@ document.getElementById('add-cardio').addEventListener('click', async () => {
        elevation,
        date: new Date().toISOString().split('T')[0],
        timestamp: Date.now(),
-       userId: currentUser.uid
+       userId: currentUser.uid,
+       is_deleted: 'N'
    };
    
    await addDoc(collection(db, 'workouts'), workout);
@@ -311,7 +315,7 @@ window.showEditModal = function(id) {
 
 window.deleteWorkout = async function(id) {
    if (confirm('Delete this workout?')) {
-       await deleteDoc(doc(db, 'workouts', id));
+       await updateDoc(doc(db, 'workouts', id), { is_deleted: 'Y' });
    }
 };
 
