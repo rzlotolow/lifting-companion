@@ -31,24 +31,48 @@
        <div id="log" class="tab-content active">
            <div class="workout-type">
                <button class="type-btn active" data-type="lifting">Lifting</button>
+               <button class="type-btn" data-type="core">Core</button>
                <button class="type-btn" data-type="cardio">Cardio</button>
            </div>
 
            <div id="lifting-form" class="form-section">
-               <input type="text" id="exercise-name" placeholder="Exercise name" list="exercises">
-               <datalist id="exercises"></datalist>
+               <select id="lifting-exercise-select">
+                   <option value="">Select exercise...</option>
+                   <option value="__new__">+ Add New Exercise</option>
+               </select>
+               <input type="text" id="lifting-exercise-name" class="hidden" placeholder="Enter new exercise name">
                <div class="input-row">
-                   <input type="number" id="sets" placeholder="Sets" min="1">
-                   <input type="number" id="reps" placeholder="Reps" min="1">
-                   <input type="number" id="weight" placeholder="Weight (lbs)" min="0" step="0.5">
+                   <input type="number" id="lifting-sets" placeholder="Sets" min="1">
+                   <input type="number" id="lifting-reps" placeholder="Reps" min="1">
+                   <input type="number" id="lifting-weight" placeholder="Weight (lbs)" min="0" step="0.5">
                </div>
                <div class="effort-selector">
                    <label>Effort:</label>
-                   <button class="effort-btn" data-effort="easy">🟢 Easy</button>
-                   <button class="effort-btn" data-effort="medium">🟡 Medium</button>
-                   <button class="effort-btn" data-effort="hard">🔴 Hard</button>
+                   <button class="effort-btn lifting-effort" data-effort="easy">🟢 Easy</button>
+                   <button class="effort-btn lifting-effort" data-effort="medium">🟡 Medium</button>
+                   <button class="effort-btn lifting-effort" data-effort="hard">🔴 Hard</button>
                </div>
                <button id="add-lifting" class="btn-primary">Add Exercise</button>
+           </div>
+
+           <div id="core-form" class="form-section hidden">
+               <select id="core-exercise-select">
+                   <option value="">Select exercise...</option>
+                   <option value="__new__">+ Add New Exercise</option>
+               </select>
+               <input type="text" id="core-exercise-name" class="hidden" placeholder="Enter new exercise name">
+               <div class="input-row">
+                   <input type="number" id="core-sets" placeholder="Sets (optional)" min="1">
+                   <input type="number" id="core-reps" placeholder="Reps (optional)" min="1">
+                   <input type="number" id="core-time" placeholder="Time (sec, optional)" min="1">
+               </div>
+               <div class="effort-selector">
+                   <label>Effort:</label>
+                   <button class="effort-btn core-effort" data-effort="easy">🟢 Easy</button>
+                   <button class="effort-btn core-effort" data-effort="medium">🟡 Medium</button>
+                   <button class="effort-btn core-effort" data-effort="hard">🔴 Hard</button>
+               </div>
+               <button id="add-core" class="btn-primary">Add Exercise</button>
            </div>
 
            <div id="cardio-form" class="form-section hidden">
