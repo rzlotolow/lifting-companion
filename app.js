@@ -1,7 +1,67 @@
-const DB_KEY = 'workouts';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+const firebaseConfig = {
+   apiKey: "AIzaSyBWOb8ITzTaKWP2nKtFE2O0TBdnW7Q1XN4",
+   authDomain: "lifting-companion-26cf8.firebaseapp.com",
+   projectId: "lifting-companion-26cf8",
+   storageBucket: "lifting-companion-26cf8.firebasestorage.app",
+   messagingSenderId: "328077423664",
+   appId: "1:328077423664:web:45ca20dab58a4b40c429f5"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
 let selectedEffort = 'medium';
-let workouts = JSON.parse(localStorage.getItem(DB_KEY)) || [];
-let editingIndex = null;
+let workouts = [];
+let editingId = null;
+let currentUser = null;
+
+// Auth state
+onAuthStateChanged(auth, (user) => {
+   if (user) {
+       currentUser = user;
+       document.getElementById('auth-screen').classList.add('hidden');
+       document.getElementById('app').classList.remove('hidden');
+       loadWorkouts();
+   } else {
+       currentUser = null;
+       document.getElementById('auth-screen').classList.remove('hidden');
+       document.getElementById('app').classList.add('hidden');
+   }
+});
+
+// Google sign in
+document.getElementById('google-signin').addEventListener('click', async () => {
+   const provider = new GoogleAuthProvider();
+   try {
+       await signInWithPopup(auth, provider);
+   } catch (error) {
+       alert('Sign in failed: ' + error.message);
+   }
+});
+
+// Sign out
+document.getElementById('signout-btn').addEventListener('click', async () => {
+   await signOut(auth);
+   workouts = [];
+});
+
+// Load workouts from Firestore
+async function loadWorkouts() {
+   const q = query(
+       collection(db, 'workouts'),
+       where('userId', '==', currentUser.uid),
+       orderBy('timestamp', 'desc')
+   );
+   const snapshot = await getDocs(q);
+   workouts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+   renderToday();
+   updateExerciseList();
+}
 
 // Tab switching
 document.querySelectorAll('.tab').forEach(tab => {
@@ -52,7 +112,7 @@ document.getElementById('cardio-type').addEventListener('change', (e) => {
 });
 
 // Add lifting
-document.getElementById('add-lifting').addEventListener('click', () => {
+document.getElementById('add-lifting').addEventListener('click', async () => {
    const name = document.getElementById('exercise-name').value.trim();
    const sets = parseInt(document.getElementById('sets').value);
    const reps = parseInt(document.getElementById('reps').value);
@@ -68,18 +128,19 @@ document.getElementById('add-lifting').addEventListener('click', () => {
        weight,
        effort: selectedEffort,
        date: new Date().toISOString().split('T')[0],
-       timestamp: Date.now()
+       timestamp: Date.now(),
+       userId: currentUser.uid
    };
    
-   workouts.push(workout);
-   save();
+   const docRef = await addDoc(collection(db, 'workouts'), workout);
+   workouts.unshift({ id: docRef.id, ...workout });
    clearLiftingForm();
    renderToday();
    updateExerciseList();
 });
 
 // Add cardio
-document.getElementById('add-cardio').addEventListener('click', () => {
+document.getElementById('add-cardio').addEventListener('click', async () => {
    const cardioType = document.getElementById('cardio-type').value;
    const time = parseInt(document.getElementById('time').value);
    const distance = parseFloat(document.getElementById('distance').value);
@@ -94,11 +155,12 @@ document.getElementById('add-cardio').addEventListener('click', () => {
        distance,
        elevation,
        date: new Date().toISOString().split('T')[0],
-       timestamp: Date.now()
+       timestamp: Date.now(),
+       userId: currentUser.uid
    };
    
-   workouts.push(workout);
-   save();
+   const docRef = await addDoc(collection(db, 'workouts'), workout);
+   workouts.unshift({ id: docRef.id, ...workout });
    clearCardioForm();
    renderToday();
 });
@@ -106,38 +168,41 @@ document.getElementById('add-cardio').addEventListener('click', () => {
 // Edit modal handlers
 document.getElementById('cancel-edit').addEventListener('click', () => {
    document.getElementById('edit-modal').classList.add('hidden');
-   editingIndex = null;
+   editingId = null;
 });
 
-document.getElementById('save-edit').addEventListener('click', () => {
-   if (editingIndex === null) return;
+document.getElementById('save-edit').addEventListener('click', async () => {
+   if (!editingId) return;
    
-   const workout = workouts[editingIndex];
+   const workout = workouts.find(w => w.id === editingId);
+   const updates = {};
    
    if (workout.type === 'lifting') {
-       workout.name = document.getElementById('edit-name').value.trim();
-       workout.sets = parseInt(document.getElementById('edit-sets').value);
-       workout.reps = parseInt(document.getElementById('edit-reps').value);
-       workout.weight = parseFloat(document.getElementById('edit-weight').value);
-       workout.effort = document.querySelector('input[name="edit-effort"]:checked').value;
+       updates.name = document.getElementById('edit-name').value.trim();
+       updates.sets = parseInt(document.getElementById('edit-sets').value);
+       updates.reps = parseInt(document.getElementById('edit-reps').value);
+       updates.weight = parseFloat(document.getElementById('edit-weight').value);
+       updates.effort = document.querySelector('input[name="edit-effort"]:checked').value;
    } else {
-       workout.time = parseInt(document.getElementById('edit-time').value);
-       workout.distance = parseFloat(document.getElementById('edit-distance').value);
+       updates.time = parseInt(document.getElementById('edit-time').value);
+       updates.distance = parseFloat(document.getElementById('edit-distance').value);
        if (workout.cardioType === 'run') {
-           workout.elevation = parseInt(document.getElementById('edit-elevation').value) || 0;
+           updates.elevation = parseInt(document.getElementById('edit-elevation').value) || 0;
        }
    }
    
-   save();
+   await updateDoc(doc(db, 'workouts', editingId), updates);
+   Object.assign(workout, updates);
+   
    document.getElementById('edit-modal').classList.add('hidden');
-   editingIndex = null;
+   editingId = null;
    renderToday();
    renderHistory();
 });
 
-function showEditModal(index) {
-   editingIndex = index;
-   const workout = workouts[index];
+window.showEditModal = function(id) {
+   editingId = id;
+   const workout = workouts.find(w => w.id === id);
    const form = document.getElementById('edit-form');
    
    if (workout.type === 'lifting') {
@@ -171,20 +236,16 @@ function showEditModal(index) {
    }
    
    document.getElementById('edit-modal').classList.remove('hidden');
-}
+};
 
-function deleteWorkout(index) {
+window.deleteWorkout = async function(id) {
    if (confirm('Delete this workout?')) {
-       workouts.splice(index, 1);
-       save();
+       await deleteDoc(doc(db, 'workouts', id));
+       workouts = workouts.filter(w => w.id !== id);
        renderToday();
        renderHistory();
    }
-}
-
-function save() {
-   localStorage.setItem(DB_KEY, JSON.stringify(workouts));
-}
+};
 
 function clearLiftingForm() {
    document.getElementById('exercise-name').value = '';
@@ -201,7 +262,7 @@ function clearCardioForm() {
 
 function renderToday() {
    const today = new Date().toISOString().split('T')[0];
-   const todayWorkouts = workouts.map((w, i) => ({ ...w, index: i })).filter(w => w.date === today);
+   const todayWorkouts = workouts.filter(w => w.date === today);
    const container = document.getElementById('today-entries');
    
    if (todayWorkouts.length === 0) {
@@ -218,8 +279,8 @@ function renderToday() {
                </div>
                <div class="entry-details">Total: ${w.sets * w.reps * w.weight}lbs</div>
                <div class="entry-actions">
-                   <button onclick="showEditModal(${w.index})" class="btn-edit">✏️ Edit</button>
-                   <button onclick="deleteWorkout(${w.index})" class="btn-delete">🗑️ Delete</button>
+                   <button onclick="showEditModal('${w.id}')" class="btn-edit">✏️ Edit</button>
+                   <button onclick="deleteWorkout('${w.id}')" class="btn-delete">🗑️ Delete</button>
                </div>
            </div>`;
        } else {
@@ -236,8 +297,8 @@ function renderToday() {
                </div>
                <div class="entry-details">Pace: ${pace}${elevText}</div>
                <div class="entry-actions">
-                   <button onclick="showEditModal(${w.index})" class="btn-edit">✏️ Edit</button>
-                   <button onclick="deleteWorkout(${w.index})" class="btn-delete">🗑️ Delete</button>
+                   <button onclick="showEditModal('${w.id}')" class="btn-edit">✏️ Edit</button>
+                   <button onclick="deleteWorkout('${w.id}')" class="btn-delete">🗑️ Delete</button>
                </div>
            </div>`;
        }
@@ -246,9 +307,9 @@ function renderToday() {
 
 function renderHistory() {
    const byDate = {};
-   workouts.forEach((w, i) => {
+   workouts.forEach(w => {
        if (!byDate[w.date]) byDate[w.date] = [];
-       byDate[w.date].push({ ...w, index: i });
+       byDate[w.date].push(w);
    });
    
    const dates = Object.keys(byDate).sort().reverse();
@@ -268,8 +329,8 @@ function renderHistory() {
                        <span>${w.sets}×${w.reps} @ ${w.weight}lbs</span>
                    </div>
                    <div class="entry-actions">
-                       <button onclick="showEditModal(${w.index})" class="btn-edit">✏️</button>
-                       <button onclick="deleteWorkout(${w.index})" class="btn-delete">🗑️</button>
+                       <button onclick="showEditModal('${w.id}')" class="btn-edit">✏️</button>
+                       <button onclick="deleteWorkout('${w.id}')" class="btn-delete">🗑️</button>
                    </div>
                </div>`;
            } else {
@@ -280,8 +341,8 @@ function renderHistory() {
                        <span>${w.distance}${distUnit} in ${w.time}min</span>
                    </div>
                    <div class="entry-actions">
-                       <button onclick="showEditModal(${w.index})" class="btn-edit">✏️</button>
-                       <button onclick="deleteWorkout(${w.index})" class="btn-delete">🗑️</button>
+                       <button onclick="showEditModal('${w.id}')" class="btn-edit">✏️</button>
+                       <button onclick="deleteWorkout('${w.id}')" class="btn-delete">🗑️</button>
                    </div>
                </div>`;
            }
@@ -381,11 +442,4 @@ function generateInsights() {
 function updateExerciseList() {
    const exercises = [...new Set(workouts.filter(w => w.type === 'lifting').map(w => w.name))];
    document.getElementById('exercises').innerHTML = exercises.map(e => `<option value="${e}">`).join('');
-}
-
-renderToday();
-updateExerciseList();
-
-if ('serviceWorker' in navigator) {
-   navigator.serviceWorker.register('./sw.js');
 }
