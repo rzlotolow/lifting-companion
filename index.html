@@ -8,8 +8,19 @@
    <link rel="manifest" href="manifest.json">
 </head>
 <body>
-   <div class="container">
-       <h1>Lifting Companion</h1>
+   <div id="auth-screen" class="auth-screen">
+       <div class="auth-container">
+           <h1>💪 Lifting Companion</h1>
+           <p>Sign in to sync your workouts across devices</p>
+           <button id="google-signin" class="btn-primary">Sign in with Google</button>
+       </div>
+   </div>
+
+   <div id="app" class="container hidden">
+       <div class="header">
+           <h1>Lifting Companion</h1>
+           <button id="signout-btn" class="btn-signout">Sign Out</button>
+       </div>
        
        <nav class="tabs">
            <button class="tab active" data-tab="log">Log Workout</button>
@@ -81,6 +92,6 @@
        </div>
    </div>
 
-   <script src="app.js"></script>
+   <script type="module" src="app.js"></script>
 </body>
 </html>
