@@ -42,9 +42,9 @@
                </select>
                <input type="text" id="lifting-exercise-name" class="hidden" placeholder="Enter new exercise name">
                <div class="input-row">
-                   <input type="number" id="lifting-sets" placeholder="Sets" min="1">
-                   <input type="number" id="lifting-reps" placeholder="Reps" min="1">
-                   <input type="number" id="lifting-weight" placeholder="Weight (lbs)" min="0" step="0.5">
+                   <input type="number" id="lifting-sets" placeholder="Sets" min="0" step="1">
+                   <input type="number" id="lifting-reps" placeholder="Reps" min="0" step="1">
+                   <input type="number" id="lifting-weight" placeholder="Weight (lbs)" min="0" step="1">
                </div>
                <div class="effort-selector">
                    <label>Effort:</label>
@@ -62,9 +62,9 @@
                </select>
                <input type="text" id="core-exercise-name" class="hidden" placeholder="Enter new exercise name">
                <div class="input-row">
-                   <input type="number" id="core-sets" placeholder="Sets (optional)" min="1">
-                   <input type="number" id="core-reps" placeholder="Reps (optional)" min="1">
-                   <input type="number" id="core-time" placeholder="Time (sec, optional)" min="1">
+                   <input type="number" id="core-sets" placeholder="Sets" min="0" step="1">
+                   <input type="number" id="core-reps" placeholder="Reps" min="0" step="1">
+                   <input type="number" id="core-time" placeholder="Time (sec)" min="0" step="1">
                </div>
                <div class="effort-selector">
                    <label>Effort:</label>
@@ -82,9 +82,9 @@
                    <option value="row">Row</option>
                </select>
                <div class="input-row" id="cardio-inputs">
-                   <input type="number" id="time" placeholder="Time (min)" min="1">
-                   <input type="number" id="distance" placeholder="Distance" min="0" step="0.1">
-                   <input type="number" id="elevation" placeholder="Elevation (ft)" min="0" class="elevation-input">
+                   <input type="number" id="time" placeholder="Time (min)" min="0" step="1">
+                   <input type="number" id="distance" placeholder="Distance" min="0" step="1">
+                   <input type="number" id="elevation" placeholder="Elevation (ft)" min="0" step="1" class="elevation-input">
                </div>
                <button id="add-cardio" class="btn-primary">Add Cardio</button>
            </div>
