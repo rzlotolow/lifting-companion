@@ -150,11 +150,11 @@ document.getElementById('add-lifting').addEventListener('click', async () => {
    const select = document.getElementById('lifting-exercise-select');
    const nameInput = document.getElementById('lifting-exercise-name');
    const name = select.value === '__new__' ? nameInput.value.trim() : select.value;
-   const sets = parseInt(document.getElementById('lifting-sets').value);
-   const reps = parseInt(document.getElementById('lifting-reps').value);
-   const weight = parseFloat(document.getElementById('lifting-weight').value);
+   const sets = parseInt(document.getElementById('lifting-sets').value) || 0;
+   const reps = parseInt(document.getElementById('lifting-reps').value) || 0;
+   const weight = parseInt(document.getElementById('lifting-weight').value) || 0;
    
-   if (!name || !sets || !reps || weight < 0) return alert('Fill all required fields');
+   if (!name) return alert('Select or enter exercise name');
    
    const workout = {
        type: 'lifting',
@@ -176,12 +176,11 @@ document.getElementById('add-core').addEventListener('click', async () => {
    const select = document.getElementById('core-exercise-select');
    const nameInput = document.getElementById('core-exercise-name');
    const name = select.value === '__new__' ? nameInput.value.trim() : select.value;
-   const sets = parseInt(document.getElementById('core-sets').value) || null;
-   const reps = parseInt(document.getElementById('core-reps').value) || null;
-   const time = parseInt(document.getElementById('core-time').value) || null;
+   const sets = parseInt(document.getElementById('core-sets').value) || 0;
+   const reps = parseInt(document.getElementById('core-reps').value) || 0;
+   const time = parseInt(document.getElementById('core-time').value) || 0;
    
-   if (!name) return alert('Enter exercise name');
-   if (!sets && !reps && !time) return alert('Fill at least one field: sets, reps, or time');
+   if (!name) return alert('Select or enter exercise name');
    
    const workout = {
        type: 'core',
@@ -201,11 +200,9 @@ document.getElementById('add-core').addEventListener('click', async () => {
 
 document.getElementById('add-cardio').addEventListener('click', async () => {
    const cardioType = document.getElementById('cardio-type').value;
-   const time = parseInt(document.getElementById('time').value);
-   const distance = parseFloat(document.getElementById('distance').value);
+   const time = parseInt(document.getElementById('time').value) || 0;
+   const distance = parseInt(document.getElementById('distance').value) || 0;
    const elevation = cardioType === 'run' ? parseInt(document.getElementById('elevation').value) || 0 : 0;
-   
-   if (!time || !distance) return alert('Fill all fields');
    
    const workout = {
        type: 'cardio',
@@ -235,19 +232,19 @@ document.getElementById('save-edit').addEventListener('click', async () => {
    
    if (workout.type === 'lifting') {
        updates.name = document.getElementById('edit-name').value.trim();
-       updates.sets = parseInt(document.getElementById('edit-sets').value);
-       updates.reps = parseInt(document.getElementById('edit-reps').value);
-       updates.weight = parseFloat(document.getElementById('edit-weight').value);
+       updates.sets = parseInt(document.getElementById('edit-sets').value) || 0;
+       updates.reps = parseInt(document.getElementById('edit-reps').value) || 0;
+       updates.weight = parseInt(document.getElementById('edit-weight').value) || 0;
        updates.effort = document.querySelector('input[name="edit-effort"]:checked').value;
    } else if (workout.type === 'core') {
        updates.name = document.getElementById('edit-name').value.trim();
-       updates.sets = parseInt(document.getElementById('edit-sets').value) || null;
-       updates.reps = parseInt(document.getElementById('edit-reps').value) || null;
-       updates.time = parseInt(document.getElementById('edit-time').value) || null;
+       updates.sets = parseInt(document.getElementById('edit-sets').value) || 0;
+       updates.reps = parseInt(document.getElementById('edit-reps').value) || 0;
+       updates.time = parseInt(document.getElementById('edit-time').value) || 0;
        updates.effort = document.querySelector('input[name="edit-effort"]:checked').value;
    } else {
-       updates.time = parseInt(document.getElementById('edit-time').value);
-       updates.distance = parseFloat(document.getElementById('edit-distance').value);
+       updates.time = parseInt(document.getElementById('edit-time').value) || 0;
+       updates.distance = parseInt(document.getElementById('edit-distance').value) || 0;
        if (workout.cardioType === 'run') {
            updates.elevation = parseInt(document.getElementById('edit-elevation').value) || 0;
        }
@@ -268,9 +265,9 @@ window.showEditModal = function(id) {
        form.innerHTML = `
            <input type="text" id="edit-name" value="${workout.name}" placeholder="Exercise name">
            <div class="input-row">
-               <input type="number" id="edit-sets" value="${workout.sets}" placeholder="Sets" min="1">
-               <input type="number" id="edit-reps" value="${workout.reps}" placeholder="Reps" min="1">
-               <input type="number" id="edit-weight" value="${workout.weight}" placeholder="Weight (lbs)" min="0" step="0.5">
+               <input type="number" id="edit-sets" value="${workout.sets}" placeholder="Sets" min="0" step="1">
+               <input type="number" id="edit-reps" value="${workout.reps}" placeholder="Reps" min="0" step="1">
+               <input type="number" id="edit-weight" value="${workout.weight}" placeholder="Weight (lbs)" min="0" step="1">
            </div>
            <div class="effort-selector">
                <label>Effort:</label>
@@ -283,9 +280,9 @@ window.showEditModal = function(id) {
        form.innerHTML = `
            <input type="text" id="edit-name" value="${workout.name}" placeholder="Exercise name">
            <div class="input-row">
-               <input type="number" id="edit-sets" value="${workout.sets || ''}" placeholder="Sets (optional)" min="1">
-               <input type="number" id="edit-reps" value="${workout.reps || ''}" placeholder="Reps (optional)" min="1">
-               <input type="number" id="edit-time" value="${workout.time || ''}" placeholder="Time (sec, optional)" min="1">
+               <input type="number" id="edit-sets" value="${workout.sets || 0}" placeholder="Sets" min="0" step="1">
+               <input type="number" id="edit-reps" value="${workout.reps || 0}" placeholder="Reps" min="0" step="1">
+               <input type="number" id="edit-time" value="${workout.time || 0}" placeholder="Time (sec)" min="0" step="1">
            </div>
            <div class="effort-selector">
                <label>Effort:</label>
@@ -297,13 +294,13 @@ window.showEditModal = function(id) {
    } else {
        const distUnit = workout.cardioType === 'row' ? 'm' : 'mi';
        const elevField = workout.cardioType === 'run' ? 
-           `<input type="number" id="edit-elevation" value="${workout.elevation}" placeholder="Elevation (ft)" min="0">` : '';
+           `<input type="number" id="edit-elevation" value="${workout.elevation}" placeholder="Elevation (ft)" min="0" step="1">` : '';
        
        form.innerHTML = `
            <p><strong>${workout.cardioType.toUpperCase()}</strong></p>
            <div class="input-row">
-               <input type="number" id="edit-time" value="${workout.time}" placeholder="Time (min)" min="1">
-               <input type="number" id="edit-distance" value="${workout.distance}" placeholder="Distance (${distUnit})" min="0" step="0.1">
+               <input type="number" id="edit-time" value="${workout.time}" placeholder="Time (min)" min="0" step="1">
+               <input type="number" id="edit-distance" value="${workout.distance}" placeholder="Distance (${distUnit})" min="0" step="1">
                ${elevField}
            </div>
        `;
