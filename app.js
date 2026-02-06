@@ -563,6 +563,8 @@ function renderTrends() {
    
    const canvas = document.getElementById('chart');
    const ctx = canvas.getContext('2d');
+   
+   // Set canvas size
    canvas.width = canvas.offsetWidth;
    canvas.height = 300;
    
@@ -584,62 +586,88 @@ function renderTrends() {
    }
    
    if (data.length === 0) {
-       ctx.fillText('No data to display', canvas.width / 2 - 50, canvas.height / 2);
+       ctx.fillStyle = '#666';
+       ctx.font = '14px sans-serif';
+       ctx.textAlign = 'center';
+       ctx.fillText('No data to display', canvas.width / 2, canvas.height / 2);
        document.getElementById('insights').innerHTML = '<p>Log workouts to see insights</p>';
        return;
    }
    
-   const maxValue = Math.max(...data, 1);
-   const padding = 50;
-   const chartWidth = canvas.width - padding * 2;
-   const chartHeight = canvas.height - padding * 2;
-   
+   // Clear canvas
    ctx.clearRect(0, 0, canvas.width, canvas.height);
    
-   ctx.strokeStyle = '#e0e0e0';
+   const padding = 60;
+   const chartWidth = canvas.width - padding * 2;
+   const chartHeight = canvas.height - padding * 2;
+   const maxValue = Math.max(...data, 1);
+   
+   // Draw grid lines and Y-axis labels
+   ctx.strokeStyle = '#ddd';
    ctx.lineWidth = 1;
+   ctx.fillStyle = '#666';
+   ctx.font = '12px sans-serif';
+   ctx.textAlign = 'right';
+   
    for (let i = 0; i <= 5; i++) {
        const y = padding + (chartHeight / 5) * i;
+       const value = Math.round(maxValue - (maxValue / 5) * i);
+       
+       // Grid line
        ctx.beginPath();
        ctx.moveTo(padding, y);
        ctx.lineTo(canvas.width - padding, y);
        ctx.stroke();
        
-       const value = maxValue - (maxValue / 5) * i;
-       ctx.fillStyle = '#666';
-       ctx.font = '12px sans-serif';
-       ctx.textAlign = 'right';
-       ctx.fillText(Math.round(value), padding - 5, y + 4);
+       // Y-axis label
+       ctx.fillText(value.toString(), padding - 10, y + 4);
    }
    
+   // Draw data line
    ctx.strokeStyle = '#007bff';
-   ctx.lineWidth = 3;
+   ctx.lineWidth = 2;
    ctx.beginPath();
    
-   data.forEach((value, i) => {
-       const x = padding + (i / (data.length - 1 || 1)) * chartWidth;
-       const y = padding + chartHeight - (value / maxValue) * chartHeight;
-       if (i === 0) ctx.moveTo(x, y);
-       else ctx.lineTo(x, y);
+   for (let i = 0; i < data.length; i++) {
+       const x = padding + (i / Math.max(data.length - 1, 1)) * chartWidth;
+       const y = padding + chartHeight - (data[i] / maxValue) * chartHeight;
        
-       ctx.fillStyle = '#007bff';
+       if (i === 0) {
+           ctx.moveTo(x, y);
+       } else {
+           ctx.lineTo(x, y);
+       }
+   }
+   ctx.stroke();
+   
+   // Draw data points
+   ctx.fillStyle = '#007bff';
+   for (let i = 0; i < data.length; i++) {
+       const x = padding + (i / Math.max(data.length - 1, 1)) * chartWidth;
+       const y = padding + chartHeight - (data[i] / maxValue) * chartHeight;
+       
        ctx.beginPath();
        ctx.arc(x, y, 4, 0, Math.PI * 2);
        ctx.fill();
-   });
-   ctx.stroke();
+   }
    
+   // Draw X-axis labels
    ctx.fillStyle = '#666';
    ctx.font = '11px sans-serif';
    ctx.textAlign = 'center';
-   labels.forEach((label, i) => {
-       const x = padding + (i / (data.length - 1 || 1)) * chartWidth;
-       ctx.fillText(label, x, canvas.height - 10);
-   });
    
+   const maxLabels = Math.min(labels.length, 10);
+   const step = Math.ceil(labels.length / maxLabels);
+   
+   for (let i = 0; i < labels.length; i += step) {
+       const x = padding + (i / Math.max(data.length - 1, 1)) * chartWidth;
+       ctx.fillText(labels[i], x, canvas.height - 20);
+   }
+   
+   // Draw Y-axis label
    const unit = currentMetric === 'weight' ? 'lbs' : 'mi';
    ctx.save();
-   ctx.translate(15, canvas.height / 2);
+   ctx.translate(20, canvas.height / 2);
    ctx.rotate(-Math.PI / 2);
    ctx.textAlign = 'center';
    ctx.fillText(unit, 0, 0);
