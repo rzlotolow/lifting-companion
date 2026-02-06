@@ -715,6 +715,9 @@ function generateInsights() {
    let currentWeekWeight = 0;
    let lastWeekWeight = 0;
    let lifetimeWeight = 0;
+   let currentWeekDistance = 0;
+   let lastWeekDistance = 0;
+   let lifetimeDistance = 0;
    
    workouts.forEach(w => {
        if (w.type === 'lifting') {
@@ -726,11 +729,20 @@ function generateInsights() {
            } else if (w.date >= lastWeekStart && w.date <= lastWeekEndStr) {
                lastWeekWeight += total;
            }
+       } else if (w.type === 'cardio' && w.cardioType !== 'row') {
+           lifetimeDistance += w.distance;
+           
+           if (w.date >= currentWeekStart) {
+               currentWeekDistance += w.distance;
+           } else if (w.date >= lastWeekStart && w.date <= lastWeekEndStr) {
+               lastWeekDistance += w.distance;
+           }
        }
    });
    
    let html = '<div class="weekly-totals"><h3>Weekly Totals</h3>';
    html += `<p>Weight: ${currentWeekWeight.toLocaleString()}lbs (Prev Wk: ${lastWeekWeight.toLocaleString()}lbs) (Lifetime: ${lifetimeWeight.toLocaleString()}lbs)</p>`;
+   html += `<p>Distance: ${currentWeekDistance.toFixed(1)}mi (Prev Wk: ${lastWeekDistance.toFixed(1)}mi) (Lifetime: ${lifetimeDistance.toFixed(1)}mi)</p>`;
    html += '</div>';
    
    if (celebrations.length > 0) {
