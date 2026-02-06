@@ -100,6 +100,15 @@
        </div>
 
        <div id="trends" class="tab-content">
+           <div class="chart-controls">
+               <div class="toggle-group">
+                   <button class="toggle-btn active" data-metric="weight">Weight Lifted</button>
+                   <button class="toggle-btn" data-metric="distance">Distance</button>
+               </div>
+               <div class="toggle-group" id="time-range-toggles">
+                   <button class="toggle-btn active" data-range="daily">Daily</button>
+               </div>
+           </div>
            <canvas id="chart"></canvas>
            <div id="insights"></div>
        </div>
