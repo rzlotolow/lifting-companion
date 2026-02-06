@@ -19,18 +19,12 @@
            <button id="sign-out-btn" class="btn-secondary">Sign Out</button>
            
            <div class="tabs">
-               <button class="tab active" data-tab="today">Today</button>
-               <button class="tab" data-tab="log">Log Workout</button>
+               <button class="tab active" data-tab="log">Log Workout</button>
                <button class="tab" data-tab="history">History</button>
                <button class="tab" data-tab="trends">Trends</button>
            </div>
 
-           <div id="today-tab" class="tab-content active">
-               <h2>Today's Workouts</h2>
-               <div id="today-entries"></div>
-           </div>
-
-           <div id="log-tab" class="tab-content">
+           <div id="log-tab" class="tab-content active">
                <div class="section-tabs">
                    <button class="section-tab active" data-section="lifting">Lifting</button>
                    <button class="section-tab" data-section="core">Core</button>
@@ -100,6 +94,9 @@
                        <button id="log-row-btn" class="btn">Log Row</button>
                    </div>
                </div>
+
+               <h2 style="margin-top: 30px;">Today's Workouts</h2>
+               <div id="today-entries"></div>
            </div>
 
            <div id="history-tab" class="tab-content">
