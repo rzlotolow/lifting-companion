@@ -4,124 +4,133 @@
    <meta charset="UTF-8">
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <title>Lifting Companion</title>
-   <link rel="stylesheet" href="style.css">
    <link rel="manifest" href="manifest.json">
+   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-   <div id="auth-screen" class="auth-screen">
-       <div class="auth-container">
-           <h1>💪 Lifting Companion</h1>
-           <p>Sign in to sync your workouts across devices</p>
-           <button id="google-signin" class="btn-primary">Sign in with Google</button>
-       </div>
-   </div>
-
-   <div id="app" class="container hidden">
-       <div class="header">
-           <h1>Lifting Companion</h1>
-           <button id="signout-btn" class="btn-signout">Sign Out</button>
-       </div>
+   <div class="container">
+       <h1>💪 Lifting Companion</h1>
        
-       <nav class="tabs">
-           <button class="tab active" data-tab="log">Log Workout</button>
-           <button class="tab" data-tab="history">History</button>
-           <button class="tab" data-tab="trends">Trends</button>
-       </nav>
+       <div id="auth-section">
+           <button id="sign-in-btn" class="btn">Sign in with Google</button>
+       </div>
 
-       <div id="log" class="tab-content active">
-           <div class="workout-type">
-               <button class="type-btn active" data-type="lifting">Lifting</button>
-               <button class="type-btn" data-type="core">Core</button>
-               <button class="type-btn" data-type="cardio">Cardio</button>
+       <div id="app-section" style="display: none;">
+           <button id="sign-out-btn" class="btn-secondary">Sign Out</button>
+           
+           <div class="tabs">
+               <button class="tab active" data-tab="today">Today</button>
+               <button class="tab" data-tab="log">Log Workout</button>
+               <button class="tab" data-tab="history">History</button>
+               <button class="tab" data-tab="trends">Trends</button>
            </div>
 
-           <div id="lifting-form" class="form-section">
-               <select id="lifting-exercise-select">
-                   <option value="">Select exercise...</option>
-                   <option value="__new__">+ Add New Exercise</option>
-               </select>
-               <input type="text" id="lifting-exercise-name" class="hidden" placeholder="Enter new exercise name">
-               <div class="input-row">
-                   <input type="number" id="lifting-sets" placeholder="Sets" min="0" step="1">
-                   <input type="number" id="lifting-reps" placeholder="Reps" min="0" step="1">
-                   <input type="number" id="lifting-weight" placeholder="Weight (lbs)" min="0" step="1">
-               </div>
-               <div class="effort-selector">
-                   <label>Effort:</label>
-                   <button class="effort-btn lifting-effort" data-effort="easy">🟢 Easy</button>
-                   <button class="effort-btn lifting-effort" data-effort="medium">🟡 Medium</button>
-                   <button class="effort-btn lifting-effort" data-effort="hard">🔴 Hard</button>
-               </div>
-               <button id="add-lifting" class="btn-primary">Add Exercise</button>
-           </div>
-
-           <div id="core-form" class="form-section hidden">
-               <select id="core-exercise-select">
-                   <option value="">Select exercise...</option>
-                   <option value="__new__">+ Add New Exercise</option>
-               </select>
-               <input type="text" id="core-exercise-name" class="hidden" placeholder="Enter new exercise name">
-               <div class="input-row">
-                   <input type="number" id="core-sets" placeholder="Sets" min="0" step="1">
-                   <input type="number" id="core-reps" placeholder="Reps" min="0" step="1">
-                   <input type="number" id="core-time" placeholder="Time (sec)" min="0" step="1">
-               </div>
-               <div class="effort-selector">
-                   <label>Effort:</label>
-                   <button class="effort-btn core-effort" data-effort="easy">🟢 Easy</button>
-                   <button class="effort-btn core-effort" data-effort="medium">🟡 Medium</button>
-                   <button class="effort-btn core-effort" data-effort="hard">🔴 Hard</button>
-               </div>
-               <button id="add-core" class="btn-primary">Add Exercise</button>
-           </div>
-
-           <div id="cardio-form" class="form-section hidden">
-               <select id="cardio-type">
-                   <option value="run">Run</option>
-                   <option value="spin">Spin</option>
-                   <option value="row">Row</option>
-               </select>
-               <div class="input-row" id="cardio-inputs">
-                   <input type="number" id="time" placeholder="Time (min)" min="0" step="1">
-                   <input type="number" id="distance" placeholder="Distance" min="0" step="1">
-                   <input type="number" id="elevation" placeholder="Elevation (ft)" min="0" step="1" class="elevation-input">
-               </div>
-               <button id="add-cardio" class="btn-primary">Add Cardio</button>
-           </div>
-
-           <div id="today-log">
-               <h3>Today's Workout</h3>
+           <div id="today-tab" class="tab-content active">
+               <h2>Today's Workouts</h2>
                <div id="today-entries"></div>
            </div>
-       </div>
 
-       <div id="history" class="tab-content">
-           <div id="history-list"></div>
-       </div>
-
-       <div id="trends" class="tab-content">
-           <div class="chart-controls">
-               <div class="toggle-group">
-                   <button class="toggle-btn active" data-metric="weight">Weight Lifted</button>
-                   <button class="toggle-btn" data-metric="distance">Distance</button>
+           <div id="log-tab" class="tab-content">
+               <div class="section-tabs">
+                   <button class="section-tab active" data-section="lifting">Lifting</button>
+                   <button class="section-tab" data-section="core">Core</button>
+                   <button class="section-tab" data-section="cardio">Cardio</button>
                </div>
-               <div class="toggle-group" id="time-range-toggles">
-                   <button class="toggle-btn active" data-range="daily">Daily</button>
+
+               <div id="lifting-section" class="workout-section active">
+                   <h2>Log Lifting Workout</h2>
+                   <select id="lifting-exercise">
+                       <option value="">Select exercise...</option>
+                       <option value="__new__">+ Add New Exercise</option>
+                   </select>
+                   <input type="text" id="new-lifting-exercise" placeholder="New exercise name" style="display: none;">
+                   <input type="number" id="sets" placeholder="Sets" min="0">
+                   <input type="number" id="reps" placeholder="Reps" min="0">
+                   <input type="number" id="weight" placeholder="Weight (lbs)" min="0">
+                   <div class="effort-buttons">
+                       <button class="effort-btn easy" data-effort="easy">Easy</button>
+                       <button class="effort-btn medium" data-effort="medium">Medium</button>
+                       <button class="effort-btn hard" data-effort="hard">Hard</button>
+                   </div>
+                   <button id="log-lifting-btn" class="btn">Log Lifting</button>
+               </div>
+
+               <div id="core-section" class="workout-section">
+                   <h2>Log Core Workout</h2>
+                   <select id="core-exercise">
+                       <option value="">Select exercise...</option>
+                       <option value="__new__">+ Add New Exercise</option>
+                   </select>
+                   <input type="text" id="new-core-exercise" placeholder="New exercise name" style="display: none;">
+                   <input type="number" id="core-sets" placeholder="Sets (optional)" min="0">
+                   <input type="number" id="core-reps" placeholder="Reps (optional)" min="0">
+                   <input type="number" id="core-time" placeholder="Time in seconds (optional)" min="0">
+                   <div class="effort-buttons">
+                       <button class="effort-btn easy" data-effort="easy">Easy</button>
+                       <button class="effort-btn medium" data-effort="medium">Medium</button>
+                       <button class="effort-btn hard" data-effort="hard">Hard</button>
+                   </div>
+                   <button id="log-core-btn" class="btn">Log Core</button>
+               </div>
+
+               <div id="cardio-section" class="workout-section">
+                   <h2>Log Cardio Workout</h2>
+                   <div class="cardio-tabs">
+                       <button class="cardio-tab active" data-cardio="run">Run</button>
+                       <button class="cardio-tab" data-cardio="spin">Spin</button>
+                       <button class="cardio-tab" data-cardio="row">Row</button>
+                   </div>
+
+                   <div id="run-inputs" class="cardio-inputs active">
+                       <input type="number" id="run-time" placeholder="Time (minutes)" min="0">
+                       <input type="number" id="run-distance" placeholder="Distance (mi)" min="0" step="0.01">
+                       <input type="number" id="run-elevation" placeholder="Elevation (ft, optional)" min="0">
+                       <button id="log-run-btn" class="btn">Log Run</button>
+                   </div>
+
+                   <div id="spin-inputs" class="cardio-inputs">
+                       <input type="number" id="spin-time" placeholder="Time (minutes)" min="0">
+                       <input type="number" id="spin-distance" placeholder="Distance (mi)" min="0" step="0.01">
+                       <button id="log-spin-btn" class="btn">Log Spin</button>
+                   </div>
+
+                   <div id="row-inputs" class="cardio-inputs">
+                       <input type="number" id="row-time" placeholder="Time (minutes)" min="0">
+                       <input type="number" id="row-distance" placeholder="Distance (meters)" min="0">
+                       <button id="log-row-btn" class="btn">Log Row</button>
+                   </div>
                </div>
            </div>
-           <canvas id="chart"></canvas>
-           <div id="insights"></div>
+
+           <div id="history-tab" class="tab-content">
+               <h2>Workout History</h2>
+               <div id="history-list"></div>
+           </div>
+
+           <div id="trends-tab" class="tab-content">
+               <h2>Trends & Insights</h2>
+               <div class="chart-controls">
+                   <div class="toggle-group">
+                       <button class="toggle-btn active" data-metric="weight">Weight Lifted</button>
+                       <button class="toggle-btn" data-metric="distance">Distance</button>
+                   </div>
+                   <div class="toggle-group">
+                       <button class="toggle-btn active" data-range="daily">Daily</button>
+                       <button class="toggle-btn" data-range="weekly">Weekly</button>
+                       <button class="toggle-btn" data-range="monthly">Monthly</button>
+                   </div>
+               </div>
+               <canvas id="chart"></canvas>
+               <div id="insights"></div>
+           </div>
        </div>
    </div>
 
-   <div id="edit-modal" class="modal hidden">
+   <div id="edit-modal" class="modal">
        <div class="modal-content">
-           <h3>Edit Workout</h3>
+           <span class="close">&times;</span>
+           <h2>Edit Workout</h2>
            <div id="edit-form"></div>
-           <div class="modal-buttons">
-               <button id="save-edit" class="btn-primary">Save</button>
-               <button id="cancel-edit" class="btn-secondary">Cancel</button>
-           </div>
        </div>
    </div>
 
