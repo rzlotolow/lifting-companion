@@ -462,7 +462,7 @@ function renderHistory() {
        }).join('');
        
        return `<div class="day-section">
-           <div class="day-header">${new Date(date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+           <div class="day-header">${new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
            ${entries}
        </div>`;
    }).join('');
