@@ -164,7 +164,7 @@ document.getElementById('add-lifting').addEventListener('click', async () => {
        reps,
        weight,
        effort: selectedLiftingEffort,
-       date: new Date().toISOString().split('T')[0],
+       date: new Date().toLocaleDateString('en-CA'),
        timestamp: Date.now(),
        userId: currentUser.uid,
        is_deleted: 'N'
@@ -191,7 +191,7 @@ document.getElementById('add-core').addEventListener('click', async () => {
        reps,
        time,
        effort: selectedCoreEffort,
-       date: new Date().toISOString().split('T')[0],
+       date: new Date().toLocaleDateString('en-CA'),
        timestamp: Date.now(),
        userId: currentUser.uid,
        is_deleted: 'N'
@@ -213,7 +213,7 @@ document.getElementById('add-cardio').addEventListener('click', async () => {
        time,
        distance,
        elevation,
-       date: new Date().toISOString().split('T')[0],
+       date: new Date().toLocaleDateString('en-CA'),
        timestamp: Date.now(),
        userId: currentUser.uid,
        is_deleted: 'N'
@@ -344,7 +344,7 @@ function clearCardioForm() {
 }
 
 function renderToday() {
-   const today = new Date().toISOString().split('T')[0];
+   const today = new Date().toLocaleDateString('en-CA');
    const todayWorkouts = workouts.filter(w => w.date === today);
    const container = document.getElementById('today-entries');
    
