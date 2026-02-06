@@ -1,65 +1,44 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, orderBy } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { getFirestore, collection, addDoc, query, where, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 const firebaseConfig = {
    apiKey: "AIzaSyBWOb8ITzTaKWP2nKtFE2O0TBdnW7Q1XN4",
    authDomain: "lifting-companion-26cf8.firebaseapp.com",
    projectId: "lifting-companion-26cf8",
    storageBucket: "lifting-companion-26cf8.firebasestorage.app",
-   messagingSenderId: "328077423664",
-   appId: "1:328077423664:web:45ca20dab58a4b40c429f5"
+   messagingSenderId: "148509178620",
+   appId: "1:148509178620:web:0c0b0f0e3e0f3e0f0e0f0e"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let selectedLiftingEffort = 'medium';
-let selectedCoreEffort = 'medium';
 let workouts = [];
-let editingId = null;
 let currentUser = null;
-let unsubscribe = null;
+let selectedEffort = 'medium';
+let currentCardioType = 'run';
+let currentWorkoutSection = 'lifting';
+let liftingExercises = [];
+let coreExercises = [];
 let currentMetric = 'weight';
 let currentRange = 'daily';
 
 onAuthStateChanged(auth, (user) => {
    if (user) {
        currentUser = user;
-       document.getElementById('auth-screen').classList.add('hidden');
-       document.getElementById('app').classList.remove('hidden');
-       setupRealtimeSync();
+       document.getElementById('auth-section').style.display = 'none';
+       document.getElementById('app-section').style.display = 'block';
+       loadWorkouts();
    } else {
        currentUser = null;
-       if (unsubscribe) unsubscribe();
-       document.getElementById('auth-screen').classList.remove('hidden');
-       document.getElementById('app').classList.add('hidden');
+       document.getElementById('auth-section').style.display = 'block';
+       document.getElementById('app-section').style.display = 'none';
    }
 });
 
-function setupRealtimeSync() {
-   const q = query(
-       collection(db, 'workouts'),
-       where('userId', '==', currentUser.uid),
-       where('is_deleted', '==', 'N'),
-       orderBy('timestamp', 'desc')
-   );
-   
-   unsubscribe = onSnapshot(q, (snapshot) => {
-       workouts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-       renderToday();
-       updateExerciseLists();
-       if (document.getElementById('history').classList.contains('active')) {
-           renderHistory();
-       }
-       if (document.getElementById('trends').classList.contains('active')) {
-           renderTrends();
-       }
-   });
-}
-
-document.getElementById('google-signin').addEventListener('click', async () => {
+document.getElementById('sign-in-btn').addEventListener('click', async () => {
    const provider = new GoogleAuthProvider();
    try {
        await signInWithPopup(auth, provider);
@@ -68,290 +47,290 @@ document.getElementById('google-signin').addEventListener('click', async () => {
    }
 });
 
-document.getElementById('signout-btn').addEventListener('click', async () => {
+document.getElementById('sign-out-btn').addEventListener('click', async () => {
    await signOut(auth);
-   workouts = [];
 });
 
 document.querySelectorAll('.tab').forEach(tab => {
    tab.addEventListener('click', () => {
-       document.querySelectorAll('.tab, .tab-content').forEach(el => el.classList.remove('active'));
+       const tabName = tab.dataset.tab;
+       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
        tab.classList.add('active');
-       document.getElementById(tab.dataset.tab).classList.add('active');
-       if (tab.dataset.tab === 'history') renderHistory();
-       if (tab.dataset.tab === 'trends') renderTrends();
+       document.getElementById(`${tabName}-tab`).classList.add('active');
+       
+       if (tabName === 'today') renderToday();
+       if (tabName === 'history') renderHistory();
+       if (tabName === 'trends') renderTrends();
    });
 });
 
-document.querySelectorAll('.type-btn').forEach(btn => {
-   btn.addEventListener('click', () => {
-       document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
-       btn.classList.add('active');
-       document.getElementById('lifting-form').classList.toggle('hidden', btn.dataset.type !== 'lifting');
-       document.getElementById('core-form').classList.toggle('hidden', btn.dataset.type !== 'core');
-       document.getElementById('cardio-form').classList.toggle('hidden', btn.dataset.type !== 'cardio');
+document.querySelectorAll('.section-tab').forEach(tab => {
+   tab.addEventListener('click', () => {
+       const section = tab.dataset.section;
+       currentWorkoutSection = section;
+       document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
+       document.querySelectorAll('.workout-section').forEach(s => s.classList.remove('active'));
+       tab.classList.add('active');
+       document.getElementById(`${section}-section`).classList.add('active');
    });
 });
 
-document.querySelectorAll('[data-metric]').forEach(btn => {
+document.querySelectorAll('.effort-btn').forEach(btn => {
    btn.addEventListener('click', () => {
-       document.querySelectorAll('[data-metric]').forEach(b => b.classList.remove('active'));
-       btn.classList.add('active');
+       const section = btn.closest('.workout-section');
+       section.querySelectorAll('.effort-btn').forEach(b => b.classList.remove('selected'));
+       btn.classList.add('selected');
+       selectedEffort = btn.dataset.effort;
+   });
+});
+
+document.querySelectorAll('.cardio-tab').forEach(tab => {
+   tab.addEventListener('click', () => {
+       currentCardioType = tab.dataset.cardio;
+       document.querySelectorAll('.cardio-tab').forEach(t => t.classList.remove('active'));
+       document.querySelectorAll('.cardio-inputs').forEach(i => i.classList.remove('active'));
+       tab.classList.add('active');
+       document.getElementById(`${currentCardioType}-inputs`).classList.add('active');
+   });
+});
+
+document.getElementById('lifting-exercise').addEventListener('change', (e) => {
+   const newExerciseInput = document.getElementById('new-lifting-exercise');
+   if (e.target.value === '__new__') {
+       newExerciseInput.style.display = 'block';
+       newExerciseInput.focus();
+   } else {
+       newExerciseInput.style.display = 'none';
+   }
+});
+
+document.getElementById('core-exercise').addEventListener('change', (e) => {
+   const newExerciseInput = document.getElementById('new-core-exercise');
+   if (e.target.value === '__new__') {
+       newExerciseInput.style.display = 'block';
+       newExerciseInput.focus();
+   } else {
+       newExerciseInput.style.display = 'none';
+   }
+});
+
+document.querySelectorAll('.toggle-btn[data-metric]').forEach(btn => {
+   btn.addEventListener('click', () => {
        currentMetric = btn.dataset.metric;
+       document.querySelectorAll('.toggle-btn[data-metric]').forEach(b => b.classList.remove('active'));
+       btn.classList.add('active');
        renderTrends();
    });
 });
 
-document.getElementById('lifting-exercise-select').addEventListener('change', (e) => {
-   const nameInput = document.getElementById('lifting-exercise-name');
-   if (e.target.value === '__new__') {
-       nameInput.classList.remove('hidden');
-       nameInput.focus();
-   } else {
-       nameInput.classList.add('hidden');
-       nameInput.value = '';
-   }
-});
-
-document.getElementById('core-exercise-select').addEventListener('change', (e) => {
-   const nameInput = document.getElementById('core-exercise-name');
-   if (e.target.value === '__new__') {
-       nameInput.classList.remove('hidden');
-       nameInput.focus();
-   } else {
-       nameInput.classList.add('hidden');
-       nameInput.value = '';
-   }
-});
-
-document.querySelectorAll('.lifting-effort').forEach(btn => {
+document.querySelectorAll('.toggle-btn[data-range]').forEach(btn => {
    btn.addEventListener('click', () => {
-       document.querySelectorAll('.lifting-effort').forEach(b => b.classList.remove('selected'));
-       btn.classList.add('selected');
-       selectedLiftingEffort = btn.dataset.effort;
+       if (!btn.disabled) {
+           currentRange = btn.dataset.range;
+           document.querySelectorAll('.toggle-btn[data-range]').forEach(b => b.classList.remove('active'));
+           btn.classList.add('active');
+           renderTrends();
+       }
    });
 });
-document.querySelector('.lifting-effort[data-effort="medium"]').classList.add('selected');
 
-document.querySelectorAll('.core-effort').forEach(btn => {
-   btn.addEventListener('click', () => {
-       document.querySelectorAll('.core-effort').forEach(b => b.classList.remove('selected'));
-       btn.classList.add('selected');
-       selectedCoreEffort = btn.dataset.effort;
-   });
-});
-document.querySelector('.core-effort[data-effort="medium"]').classList.add('selected');
-
-document.getElementById('cardio-type').addEventListener('change', (e) => {
-   const distanceInput = document.getElementById('distance');
-   const elevationInput = document.querySelector('.elevation-input');
+document.getElementById('log-lifting-btn').addEventListener('click', async () => {
+   const exerciseSelect = document.getElementById('lifting-exercise');
+   const newExerciseInput = document.getElementById('new-lifting-exercise');
+   let name = exerciseSelect.value === '__new__' ? newExerciseInput.value.trim() : exerciseSelect.value;
    
-   if (e.target.value === 'row') {
-       distanceInput.placeholder = 'Distance (m)';
-       elevationInput.style.display = 'none';
-   } else if (e.target.value === 'run') {
-       distanceInput.placeholder = 'Distance (mi)';
-       elevationInput.style.display = 'block';
-   } else {
-       distanceInput.placeholder = 'Distance (mi)';
-       elevationInput.style.display = 'none';
+   const sets = parseInt(document.getElementById('sets').value) || 0;
+   const reps = parseInt(document.getElementById('reps').value) || 0;
+   const weight = parseInt(document.getElementById('weight').value) || 0;
+   
+   if (!name || sets === 0 || reps === 0 || weight === 0) {
+       alert('Please fill in all fields');
+       return;
    }
-});
-
-document.getElementById('add-lifting').addEventListener('click', async () => {
-   const select = document.getElementById('lifting-exercise-select');
-   const nameInput = document.getElementById('lifting-exercise-name');
-   const name = select.value === '__new__' ? nameInput.value.trim() : select.value;
-   const sets = parseInt(document.getElementById('lifting-sets').value) || 0;
-   const reps = parseInt(document.getElementById('lifting-reps').value) || 0;
-   const weight = parseInt(document.getElementById('lifting-weight').value) || 0;
    
-   if (!name) return alert('Select or enter exercise name');
-   
-   const workout = {
+   await addDoc(collection(db, 'workouts'), {
        type: 'lifting',
        name,
        sets,
        reps,
        weight,
-       effort: selectedLiftingEffort,
+       effort: selectedEffort,
        date: new Date().toLocaleDateString('en-CA'),
-       timestamp: Date.now(),
+       timestamp: new Date(),
        userId: currentUser.uid,
        is_deleted: 'N'
-   };
+   });
    
-   await addDoc(collection(db, 'workouts'), workout);
-   clearLiftingForm();
+   document.getElementById('sets').value = '';
+   document.getElementById('reps').value = '';
+   document.getElementById('weight').value = '';
+   newExerciseInput.value = '';
+   newExerciseInput.style.display = 'none';
+   exerciseSelect.value = '';
+   document.querySelectorAll('#lifting-section .effort-btn').forEach(b => b.classList.remove('selected'));
+   document.querySelector('#lifting-section .effort-btn.medium').classList.add('selected');
+   selectedEffort = 'medium';
 });
 
-document.getElementById('add-core').addEventListener('click', async () => {
-   const select = document.getElementById('core-exercise-select');
-   const nameInput = document.getElementById('core-exercise-name');
-   const name = select.value === '__new__' ? nameInput.value.trim() : select.value;
+document.getElementById('log-core-btn').addEventListener('click', async () => {
+   const exerciseSelect = document.getElementById('core-exercise');
+   const newExerciseInput = document.getElementById('new-core-exercise');
+   let name = exerciseSelect.value === '__new__' ? newExerciseInput.value.trim() : exerciseSelect.value;
+   
    const sets = parseInt(document.getElementById('core-sets').value) || 0;
    const reps = parseInt(document.getElementById('core-reps').value) || 0;
    const time = parseInt(document.getElementById('core-time').value) || 0;
    
-   if (!name) return alert('Select or enter exercise name');
+   if (!name || (sets === 0 && reps === 0 && time === 0)) {
+       alert('Please fill in exercise name and at least one field');
+       return;
+   }
    
    const workout = {
        type: 'core',
        name,
-       sets,
-       reps,
-       time,
-       effort: selectedCoreEffort,
+       effort: selectedEffort,
        date: new Date().toLocaleDateString('en-CA'),
-       timestamp: Date.now(),
+       timestamp: new Date(),
        userId: currentUser.uid,
        is_deleted: 'N'
    };
    
-   await addDoc(collection(db, 'workouts'), workout);
-   clearCoreForm();
-});
-
-document.getElementById('add-cardio').addEventListener('click', async () => {
-   const cardioType = document.getElementById('cardio-type').value;
-   const time = parseInt(document.getElementById('time').value) || 0;
-   const distance = parseInt(document.getElementById('distance').value) || 0;
-   const elevation = cardioType === 'run' ? parseInt(document.getElementById('elevation').value) || 0 : 0;
-   
-   const workout = {
-       type: 'cardio',
-       cardioType,
-       time,
-       distance,
-       elevation,
-       date: new Date().toLocaleDateString('en-CA'),
-       timestamp: Date.now(),
-       userId: currentUser.uid,
-       is_deleted: 'N'
-   };
+   if (sets > 0) workout.sets = sets;
+   if (reps > 0) workout.reps = reps;
+   if (time > 0) workout.time = time;
    
    await addDoc(collection(db, 'workouts'), workout);
-   clearCardioForm();
-});
-
-document.getElementById('cancel-edit').addEventListener('click', () => {
-   document.getElementById('edit-modal').classList.add('hidden');
-   editingId = null;
-});
-
-document.getElementById('save-edit').addEventListener('click', async () => {
-   if (!editingId) return;
    
-   const workout = workouts.find(w => w.id === editingId);
-   const updates = {};
-   
-   if (workout.type === 'lifting') {
-       updates.name = document.getElementById('edit-name').value.trim();
-       updates.sets = parseInt(document.getElementById('edit-sets').value) || 0;
-       updates.reps = parseInt(document.getElementById('edit-reps').value) || 0;
-       updates.weight = parseInt(document.getElementById('edit-weight').value) || 0;
-       updates.effort = document.querySelector('input[name="edit-effort"]:checked').value;
-   } else if (workout.type === 'core') {
-       updates.name = document.getElementById('edit-name').value.trim();
-       updates.sets = parseInt(document.getElementById('edit-sets').value) || 0;
-       updates.reps = parseInt(document.getElementById('edit-reps').value) || 0;
-       updates.time = parseInt(document.getElementById('edit-time').value) || 0;
-       updates.effort = document.querySelector('input[name="edit-effort"]:checked').value;
-   } else {
-       updates.time = parseInt(document.getElementById('edit-time').value) || 0;
-       updates.distance = parseInt(document.getElementById('edit-distance').value) || 0;
-       if (workout.cardioType === 'run') {
-           updates.elevation = parseInt(document.getElementById('edit-elevation').value) || 0;
-       }
-   }
-   
-   await updateDoc(doc(db, 'workouts', editingId), updates);
-   
-   document.getElementById('edit-modal').classList.add('hidden');
-   editingId = null;
-});
-
-window.showEditModal = function(id) {
-   editingId = id;
-   const workout = workouts.find(w => w.id === id);
-   const form = document.getElementById('edit-form');
-   
-   if (workout.type === 'lifting') {
-       form.innerHTML = `
-           <input type="text" id="edit-name" value="${workout.name}" placeholder="Exercise name">
-           <div class="input-row">
-               <input type="number" id="edit-sets" value="${workout.sets}" placeholder="Sets" min="0" step="1">
-               <input type="number" id="edit-reps" value="${workout.reps}" placeholder="Reps" min="0" step="1">
-               <input type="number" id="edit-weight" value="${workout.weight}" placeholder="Weight (lbs)" min="0" step="1">
-           </div>
-           <div class="effort-selector">
-               <label>Effort:</label>
-               <label><input type="radio" name="edit-effort" value="easy" ${workout.effort === 'easy' ? 'checked' : ''}> 🟢 Easy</label>
-               <label><input type="radio" name="edit-effort" value="medium" ${workout.effort === 'medium' ? 'checked' : ''}> 🟡 Medium</label>
-               <label><input type="radio" name="edit-effort" value="hard" ${workout.effort === 'hard' ? 'checked' : ''}> 🔴 Hard</label>
-           </div>
-       `;
-   } else if (workout.type === 'core') {
-       form.innerHTML = `
-           <input type="text" id="edit-name" value="${workout.name}" placeholder="Exercise name">
-           <div class="input-row">
-               <input type="number" id="edit-sets" value="${workout.sets || 0}" placeholder="Sets" min="0" step="1">
-               <input type="number" id="edit-reps" value="${workout.reps || 0}" placeholder="Reps" min="0" step="1">
-               <input type="number" id="edit-time" value="${workout.time || 0}" placeholder="Time (sec)" min="0" step="1">
-           </div>
-           <div class="effort-selector">
-               <label>Effort:</label>
-               <label><input type="radio" name="edit-effort" value="easy" ${workout.effort === 'easy' ? 'checked' : ''}> 🟢 Easy</label>
-               <label><input type="radio" name="edit-effort" value="medium" ${workout.effort === 'medium' ? 'checked' : ''}> 🟡 Medium</label>
-               <label><input type="radio" name="edit-effort" value="hard" ${workout.effort === 'hard' ? 'checked' : ''}> 🔴 Hard</label>
-           </div>
-       `;
-   } else {
-       const distUnit = workout.cardioType === 'row' ? 'm' : 'mi';
-       const elevField = workout.cardioType === 'run' ? 
-           `<input type="number" id="edit-elevation" value="${workout.elevation}" placeholder="Elevation (ft)" min="0" step="1">` : '';
-       
-       form.innerHTML = `
-           <p><strong>${workout.cardioType.toUpperCase()}</strong></p>
-           <div class="input-row">
-               <input type="number" id="edit-time" value="${workout.time}" placeholder="Time (min)" min="0" step="1">
-               <input type="number" id="edit-distance" value="${workout.distance}" placeholder="Distance (${distUnit})" min="0" step="1">
-               ${elevField}
-           </div>
-       `;
-   }
-   
-   document.getElementById('edit-modal').classList.remove('hidden');
-};
-
-window.deleteWorkout = async function(id) {
-   if (confirm('Delete this workout?')) {
-       await updateDoc(doc(db, 'workouts', id), { is_deleted: 'Y' });
-   }
-};
-
-function clearLiftingForm() {
-   document.getElementById('lifting-exercise-select').value = '';
-   document.getElementById('lifting-exercise-name').value = '';
-   document.getElementById('lifting-exercise-name').classList.add('hidden');
-   document.getElementById('lifting-sets').value = '';
-   document.getElementById('lifting-reps').value = '';
-   document.getElementById('lifting-weight').value = '';
-}
-
-function clearCoreForm() {
-   document.getElementById('core-exercise-select').value = '';
-   document.getElementById('core-exercise-name').value = '';
-   document.getElementById('core-exercise-name').classList.add('hidden');
    document.getElementById('core-sets').value = '';
    document.getElementById('core-reps').value = '';
    document.getElementById('core-time').value = '';
+   newExerciseInput.value = '';
+   newExerciseInput.style.display = 'none';
+   exerciseSelect.value = '';
+   document.querySelectorAll('#core-section .effort-btn').forEach(b => b.classList.remove('selected'));
+   document.querySelector('#core-section .effort-btn.medium').classList.add('selected');
+   selectedEffort = 'medium';
+});
+
+document.getElementById('log-run-btn').addEventListener('click', async () => {
+   const time = parseInt(document.getElementById('run-time').value) || 0;
+   const distance = parseFloat(document.getElementById('run-distance').value) || 0;
+   const elevation = parseInt(document.getElementById('run-elevation').value) || 0;
+   
+   if (time === 0 || distance === 0) {
+       alert('Please fill in time and distance');
+       return;
+   }
+   
+   const workout = {
+       type: 'cardio',
+       cardioType: 'run',
+       time,
+       distance,
+       date: new Date().toLocaleDateString('en-CA'),
+       timestamp: new Date(),
+       userId: currentUser.uid,
+       is_deleted: 'N'
+   };
+   
+   if (elevation > 0) workout.elevation = elevation;
+   
+   await addDoc(collection(db, 'workouts'), workout);
+   
+   document.getElementById('run-time').value = '';
+   document.getElementById('run-distance').value = '';
+   document.getElementById('run-elevation').value = '';
+});
+
+document.getElementById('log-spin-btn').addEventListener('click', async () => {
+   const time = parseInt(document.getElementById('spin-time').value) || 0;
+   const distance = parseFloat(document.getElementById('spin-distance').value) || 0;
+   
+   if (time === 0 || distance === 0) {
+       alert('Please fill in time and distance');
+       return;
+   }
+   
+   await addDoc(collection(db, 'workouts'), {
+       type: 'cardio',
+       cardioType: 'spin',
+       time,
+       distance,
+       date: new Date().toLocaleDateString('en-CA'),
+       timestamp: new Date(),
+       userId: currentUser.uid,
+       is_deleted: 'N'
+   });
+   
+   document.getElementById('spin-time').value = '';
+   document.getElementById('spin-distance').value = '';
+});
+
+document.getElementById('log-row-btn').addEventListener('click', async () => {
+   const time = parseInt(document.getElementById('row-time').value) || 0;
+   const distance = parseInt(document.getElementById('row-distance').value) || 0;
+   
+   if (time === 0 || distance === 0) {
+       alert('Please fill in time and distance');
+       return;
+   }
+   
+   await addDoc(collection(db, 'workouts'), {
+       type: 'cardio',
+       cardioType: 'row',
+       time,
+       distance,
+       date: new Date().toLocaleDateString('en-CA'),
+       timestamp: new Date(),
+       userId: currentUser.uid,
+       is_deleted: 'N'
+   });
+   
+   document.getElementById('row-time').value = '';
+   document.getElementById('row-distance').value = '';
+});
+
+function loadWorkouts() {
+   const q = query(
+       collection(db, 'workouts'),
+       where('userId', '==', currentUser.uid),
+       where('is_deleted', '==', 'N'),
+       orderBy('timestamp', 'desc')
+   );
+   
+   onSnapshot(q, (snapshot) => {
+       workouts = snapshot.docs.map(doc => ({
+           id: doc.id,
+           ...doc.data()
+       }));
+       updateExerciseLists();
+       renderToday();
+   });
 }
 
-function clearCardioForm() {
-   document.getElementById('time').value = '';
-   document.getElementById('distance').value = '';
-   document.getElementById('elevation').value = '';
+function updateExerciseLists() {
+   const liftingSet = new Set();
+   const coreSet = new Set();
+   
+   workouts.forEach(w => {
+       if (w.type === 'lifting') liftingSet.add(w.name);
+       if (w.type === 'core') coreSet.add(w.name);
+   });
+   
+   liftingExercises = Array.from(liftingSet).sort();
+   coreExercises = Array.from(coreSet).sort();
+   
+   const liftingSelect = document.getElementById('lifting-exercise');
+   liftingSelect.innerHTML = '<option value="">Select exercise...</option>' +
+       liftingExercises.map(e => `<option value="${e}">${e}</option>`).join('') +
+       '<option value="__new__">+ Add New Exercise</option>';
+   
+   const coreSelect = document.getElementById('core-exercise');
+   coreSelect.innerHTML = '<option value="">Select exercise...</option>' +
+       coreExercises.map(e => `<option value="${e}">${e}</option>`).join('') +
+       '<option value="__new__">+ Add New Exercise</option>';
 }
 
 function renderToday() {
@@ -430,6 +409,13 @@ function renderHistory() {
    }
    
    container.innerHTML = dates.map(date => {
+       const displayDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { 
+           weekday: 'short', 
+           year: 'numeric', 
+           month: 'short', 
+           day: 'numeric' 
+       });
+       
        const entries = byDate[date].map(w => {
            if (w.type === 'lifting') {
                return `<div class="entry ${w.effort}">
@@ -459,11 +445,17 @@ function renderHistory() {
                </div>`;
            } else {
                const distUnit = w.cardioType === 'row' ? 'm' : 'mi';
+               const elevText = w.elevation ? `, ${w.elevation}ft` : '';
+               const pace = w.cardioType === 'row' ? 
+                   `${(w.time / (w.distance / 500)).toFixed(1)} min/500m` :
+                   `${(w.time / w.distance).toFixed(1)} min/mi`;
+               
                return `<div class="entry">
                    <div class="entry-header">
                        <span>${w.cardioType.toUpperCase()}</span>
                        <span>${w.distance}${distUnit} in ${w.time}min</span>
                    </div>
+                   <div class="entry-details">Pace: ${pace}${elevText}</div>
                    <div class="entry-actions">
                        <button onclick="showEditModal('${w.id}')" class="btn-edit">✏️</button>
                        <button onclick="deleteWorkout('${w.id}')" class="btn-delete">🗑️</button>
@@ -472,29 +464,11 @@ function renderHistory() {
            }
        }).join('');
        
-       return `<div class="day-section">
-           <div class="day-header">${new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+       return `<div class="date-group">
+           <div class="date-header">${displayDate}</div>
            ${entries}
        </div>`;
    }).join('');
-}
-
-function getWeekStart(date) {
-   const d = new Date(date + 'T12:00:00');
-   const day = d.getDay();
-   const diff = d.getDate() - day;
-   return new Date(d.setDate(diff)).toLocaleDateString('en-CA');
-}
-
-function getMonthKey(date) {
-   const d = new Date(date + 'T12:00:00');
-   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function formatMonthLabel(monthKey) {
-   const [year, month] = monthKey.split('-');
-   const d = new Date(year, month - 1);
-   return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
 }
 
 function aggregateData() {
@@ -504,58 +478,72 @@ function aggregateData() {
    
    workouts.forEach(w => {
        if (!byDate[w.date]) byDate[w.date] = { weight: 0, distance: 0 };
-       if (w.type === 'lifting') byDate[w.date].weight += w.sets * w.reps * w.weight;
-       if (w.type === 'cardio') {
-           const distInMiles = w.cardioType === 'row' ? w.distance / 1609.34 : w.distance;
-           byDate[w.date].distance += distInMiles;
+       
+       if (w.type === 'lifting') {
+           byDate[w.date].weight += w.sets * w.reps * w.weight;
+       } else if (w.type === 'cardio' && w.cardioType !== 'row') {
+           byDate[w.date].distance += w.distance;
        }
        
-       const weekStart = getWeekStart(w.date);
-       if (!byWeek[weekStart]) byWeek[weekStart] = { weight: 0, distance: 0 };
-       if (w.type === 'lifting') byWeek[weekStart].weight += w.sets * w.reps * w.weight;
-       if (w.type === 'cardio') {
-           const distInMiles = w.cardioType === 'row' ? w.distance / 1609.34 : w.distance;
-           byWeek[weekStart].distance += distInMiles;
+       const date = new Date(w.date + 'T12:00:00');
+       const sunday = new Date(date);
+       sunday.setDate(date.getDate() - date.getDay());
+       const weekKey = sunday.toLocaleDateString('en-CA');
+       
+       if (!byWeek[weekKey]) byWeek[weekKey] = { weight: 0, distance: 0 };
+       if (w.type === 'lifting') {
+           byWeek[weekKey].weight += w.sets * w.reps * w.weight;
+       } else if (w.type === 'cardio' && w.cardioType !== 'row') {
+           byWeek[weekKey].distance += w.distance;
        }
        
-       const monthKey = getMonthKey(w.date);
+       const monthKey = w.date.substring(0, 7);
        if (!byMonth[monthKey]) byMonth[monthKey] = { weight: 0, distance: 0 };
-       if (w.type === 'lifting') byMonth[monthKey].weight += w.sets * w.reps * w.weight;
-       if (w.type === 'cardio') {
-           const distInMiles = w.cardioType === 'row' ? w.distance / 1609.34 : w.distance;
-           byMonth[monthKey].distance += distInMiles;
+       if (w.type === 'lifting') {
+           byMonth[monthKey].weight += w.sets * w.reps * w.weight;
+       } else if (w.type === 'cardio' && w.cardioType !== 'row') {
+           byMonth[monthKey].distance += w.distance;
        }
    });
    
    return { byDate, byWeek, byMonth };
 }
 
+function formatMonthLabel(monthKey) {
+   const [year, month] = monthKey.split('-');
+   const date = new Date(year, parseInt(month) - 1);
+   return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+}
+
 function updateTimeRangeToggles() {
-   const { byDate, byWeek, byMonth } = aggregateData();
+   const { byWeek, byMonth } = aggregateData();
    const weekCount = Object.keys(byWeek).length;
    const monthCount = Object.keys(byMonth).length;
    
-   const container = document.getElementById('time-range-toggles');
-   let html = '<button class="toggle-btn active" data-range="daily">Daily</button>';
+   const weeklyBtn = document.querySelector('.toggle-btn[data-range="weekly"]');
+   const monthlyBtn = document.querySelector('.toggle-btn[data-range="monthly"]');
    
-   if (weekCount >= 6) {
-       html += '<button class="toggle-btn" data-range="weekly">Weekly</button>';
+   if (weekCount < 6) {
+       weeklyBtn.disabled = true;
+       if (currentRange === 'weekly') {
+           currentRange = 'daily';
+           document.querySelector('.toggle-btn[data-range="daily"]').classList.add('active');
+           weeklyBtn.classList.remove('active');
+       }
+   } else {
+       weeklyBtn.disabled = false;
    }
    
-   if (monthCount >= 5) {
-       html += '<button class="toggle-btn" data-range="monthly">Monthly</button>';
+   if (monthCount < 5) {
+       monthlyBtn.disabled = true;
+       if (currentRange === 'monthly') {
+           currentRange = 'daily';
+           document.querySelector('.toggle-btn[data-range="daily"]').classList.add('active');
+           monthlyBtn.classList.remove('active');
+       }
+   } else {
+       monthlyBtn.disabled = false;
    }
-   
-   container.innerHTML = html;
-   
-   container.querySelectorAll('[data-range]').forEach(btn => {
-       btn.addEventListener('click', () => {
-           container.querySelectorAll('[data-range]').forEach(b => b.classList.remove('active'));
-           btn.classList.add('active');
-           currentRange = btn.dataset.range;
-           renderTrends();
-       });
-   });
 }
 
 function renderTrends() {
@@ -564,7 +552,6 @@ function renderTrends() {
    const canvas = document.getElementById('chart');
    const ctx = canvas.getContext('2d');
    
-   // Set canvas size
    canvas.width = canvas.offsetWidth;
    canvas.height = 300;
    
@@ -594,7 +581,6 @@ function renderTrends() {
        return;
    }
    
-   // Clear canvas
    ctx.clearRect(0, 0, canvas.width, canvas.height);
    
    const padding = 60;
@@ -602,7 +588,6 @@ function renderTrends() {
    const chartHeight = canvas.height - padding * 2;
    const maxValue = Math.max(...data, 1);
    
-   // Draw grid lines and Y-axis labels
    ctx.strokeStyle = '#ddd';
    ctx.lineWidth = 1;
    ctx.fillStyle = '#666';
@@ -613,17 +598,14 @@ function renderTrends() {
        const y = padding + (chartHeight / 5) * i;
        const value = Math.round(maxValue - (maxValue / 5) * i);
        
-       // Grid line
        ctx.beginPath();
        ctx.moveTo(padding, y);
        ctx.lineTo(canvas.width - padding, y);
        ctx.stroke();
        
-       // Y-axis label
        ctx.fillText(value.toString(), padding - 10, y + 4);
    }
    
-   // Draw data line
    ctx.strokeStyle = '#007bff';
    ctx.lineWidth = 2;
    ctx.beginPath();
@@ -640,7 +622,6 @@ function renderTrends() {
    }
    ctx.stroke();
    
-   // Draw data points
    ctx.fillStyle = '#007bff';
    for (let i = 0; i < data.length; i++) {
        const x = padding + (i / Math.max(data.length - 1, 1)) * chartWidth;
@@ -651,7 +632,6 @@ function renderTrends() {
        ctx.fill();
    }
    
-   // Draw X-axis labels
    ctx.fillStyle = '#666';
    ctx.font = '11px sans-serif';
    ctx.textAlign = 'center';
@@ -664,7 +644,6 @@ function renderTrends() {
        ctx.fillText(labels[i], x, canvas.height - 20);
    }
    
-   // Draw Y-axis label
    const unit = currentMetric === 'weight' ? 'lbs' : 'mi';
    ctx.save();
    ctx.translate(20, canvas.height / 2);
@@ -678,104 +657,209 @@ function renderTrends() {
 }
 
 function generateInsights() {
-   const liftingByExercise = {};
-   const coreByExercise = {};
+   const byExercise = {};
+   const liftingWorkouts = workouts.filter(w => w.type === 'lifting');
    
-   workouts.filter(w => w.type === 'lifting').forEach(w => {
-       if (!liftingByExercise[w.name]) liftingByExercise[w.name] = [];
-       liftingByExercise[w.name].push(w);
+   liftingWorkouts.forEach(w => {
+       if (!byExercise[w.name]) byExercise[w.name] = [];
+       byExercise[w.name].push(w);
    });
    
-   workouts.filter(w => w.type === 'core').forEach(w => {
-       if (!coreByExercise[w.name]) coreByExercise[w.name] = [];
-       coreByExercise[w.name].push(w);
-   });
+   const suggestions = [];
+   const celebrations = [];
    
-   const insights = [];
-   
-   Object.keys(liftingByExercise).forEach(exercise => {
-       const exercises = liftingByExercise[exercise].sort((a, b) => a.timestamp - b.timestamp);
-       const recent20 = exercises.slice(-20);
-       const maxWeight = Math.max(...recent20.map(e => e.weight));
-       const maxWeightWorkouts = recent20.filter(e => e.weight === maxWeight);
-       const recent25 = exercises.slice(-25);
-       const maxWeightIn25 = recent25.filter(e => e.weight === maxWeight);
-       const last5AtMax = maxWeightIn25.slice(-5);
+   Object.keys(byExercise).forEach(exercise => {
+       const sessions = byExercise[exercise].sort((a, b) => 
+           new Date(b.date + 'T12:00:00') - new Date(a.date + 'T12:00:00')
+       );
        
-       if (last5AtMax.length === 5 && last5AtMax.every(e => e.effort === 'easy')) {
-           insights.push(`<span class="suggestion">💪 Consider increasing weight for ${exercise} to ${maxWeight + 5}lbs</span> - Last 5 sessions at ${maxWeight}lbs were all easy`);
+       if (sessions.length >= 10) {
+           const latest = sessions[0];
+           const last10 = sessions.slice(0, 10);
+           const maxInLast10 = Math.max(...last10.map(s => s.weight));
+           
+           if (latest.weight === maxInLast10) {
+               celebrations.push(`🎉 ${exercise}: New personal best in last 10 sessions at ${latest.weight}lbs!`);
+           }
        }
        
-       const last10 = exercises.slice(-10);
-       const maxInLast10 = Math.max(...last10.map(e => e.weight));
-       const latest = exercises[exercises.length - 1];
-       if (latest.weight === maxInLast10 && last10.filter(e => e.weight === maxInLast10).length === 1) {
-           insights.push(`🎉 New record for ${exercise}! ${latest.weight}lbs is your highest in the last 10 sessions`);
-       }
-   });
-   
-   Object.keys(coreByExercise).forEach(exercise => {
-       const exercises = coreByExercise[exercise].sort((a, b) => a.timestamp - b.timestamp);
-       const recent25 = exercises.slice(-25);
-       const last5 = recent25.slice(-5);
-       
-       if (last5.length === 5 && last5.every(e => e.effort === 'easy')) {
-           insights.push(`<span class="suggestion">💪 ${exercise} getting easier</span> - Last 5 sessions were all easy, consider increasing difficulty`);
+       if (sessions.length >= 20) {
+           const last20 = sessions.slice(0, 20);
+           const maxWeight = Math.max(...last20.map(s => s.weight));
+           const last25 = sessions.slice(0, Math.min(25, sessions.length));
+           const atMaxWeight = last25.filter(s => s.weight === maxWeight);
+           
+           if (atMaxWeight.length >= 5) {
+               const last5AtMax = atMaxWeight.slice(0, 5);
+               const allEasy = last5AtMax.every(s => s.effort === 'easy');
+               
+               if (allEasy) {
+                   suggestions.push(`💪 ${exercise}: Consider increasing weight from ${maxWeight}lbs to ${maxWeight + 5}lbs (5 easy sessions at max weight)`);
+               }
+           }
        }
    });
    
    const today = new Date();
-   const currentWeekStart = getWeekStart(new Date().toLocaleDateString('en-CA'));
-   const lastWeekStart = new Date(new Date(currentWeekStart + 'T12:00:00').getTime() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA');
+   const sunday = new Date(today);
+   sunday.setDate(today.getDate() - today.getDay());
+   const lastSunday = new Date(sunday);
+   lastSunday.setDate(sunday.getDate() - 7);
    
-   const currentWeekWorkouts = workouts.filter(w => getWeekStart(w.date) === currentWeekStart);
-   const lastWeekWorkouts = workouts.filter(w => getWeekStart(w.date) === lastWeekStart);
+   const currentWeekStart = sunday.toLocaleDateString('en-CA');
+   const lastWeekStart = lastSunday.toLocaleDateString('en-CA');
+   const lastWeekEnd = new Date(sunday);
+   lastWeekEnd.setDate(sunday.getDate() - 1);
+   const lastWeekEndStr = lastWeekEnd.toLocaleDateString('en-CA');
    
-   const currentWeekWeight = currentWeekWorkouts.filter(w => w.type === 'lifting').reduce((sum, w) => sum + w.sets * w.reps * w.weight, 0);
-   const lastWeekWeight = lastWeekWorkouts.filter(w => w.type === 'lifting').reduce((sum, w) => sum + w.sets * w.reps * w.weight, 0);
+   let currentWeekWeight = 0;
+   let lastWeekWeight = 0;
+   let lifetimeWeight = 0;
    
-   const currentWeekDistance = currentWeekWorkouts.filter(w => w.type === 'cardio').reduce((sum, w) => {
-       const distInMiles = w.cardioType === 'row' ? w.distance / 1609.34 : w.distance;
-       return sum + distInMiles;
-   }, 0);
-   const lastWeekDistance = lastWeekWorkouts.filter(w => w.type === 'cardio').reduce((sum, w) => {
-       const distInMiles = w.cardioType === 'row' ? w.distance / 1609.34 : w.distance;
-       return sum + distInMiles;
-   }, 0);
+   workouts.forEach(w => {
+       if (w.type === 'lifting') {
+           const total = w.sets * w.reps * w.weight;
+           lifetimeWeight += total;
+           
+           if (w.date >= currentWeekStart) {
+               currentWeekWeight += total;
+           } else if (w.date >= lastWeekStart && w.date <= lastWeekEndStr) {
+               lastWeekWeight += total;
+           }
+       }
+   });
    
-   const currentWeekCoreTime = currentWeekWorkouts.filter(w => w.type === 'core' && w.time).reduce((sum, w) => sum + w.time, 0);
-   const lastWeekCoreTime = lastWeekWorkouts.filter(w => w.type === 'core' && w.time).reduce((sum, w) => sum + w.time, 0);
+   let html = '<div class="weekly-totals"><h3>Weekly Totals</h3>';
+   html += `<p>Weight: ${currentWeekWeight.toLocaleString()}lbs (Prev Wk: ${lastWeekWeight.toLocaleString()}lbs) (Lifetime: ${lifetimeWeight.toLocaleString()}lbs)</p>`;
+   html += '</div>';
    
-   const totalWeight = workouts.filter(w => w.type === 'lifting').reduce((sum, w) => sum + w.sets * w.reps * w.weight, 0);
-   const totalDistance = workouts.filter(w => w.type === 'cardio').reduce((sum, w) => {
-       const distInMiles = w.cardioType === 'row' ? w.distance / 1609.34 : w.distance;
-       return sum + distInMiles;
-   }, 0);
-   const totalCoreTime = workouts.filter(w => w.type === 'core' && w.time).reduce((sum, w) => sum + w.time, 0);
+   if (celebrations.length > 0) {
+       html += '<h3>🎉 Celebrations</h3><ul>';
+       celebrations.forEach(c => html += `<li>${c}</li>`);
+       html += '</ul>';
+   }
    
-   const weeklyTotals = `
-       <div class="weekly-totals">
-           <h3>Weekly Totals</h3>
-           <div>Weight: ${currentWeekWeight.toLocaleString()}lbs (Prev Wk: ${lastWeekWeight.toLocaleString()}lbs) (Lifetime: ${totalWeight.toLocaleString()}lbs)</div>
-           <div>Distance: ${currentWeekDistance.toFixed(1)}mi (Prev Wk: ${lastWeekDistance.toFixed(1)}mi) (Lifetime: ${totalDistance.toFixed(1)}mi)</div>
-           <div>Core Time: ${Math.floor(currentWeekCoreTime / 60)}min (Prev Wk: ${Math.floor(lastWeekCoreTime / 60)}min) (Lifetime: ${Math.floor(totalCoreTime / 60)}min)</div>
-       </div>
-   `;
+   if (suggestions.length > 0) {
+       html += '<h3>💡 Suggestions</h3><ul>';
+       suggestions.forEach(s => html += `<li>${s}</li>`);
+       html += '</ul>';
+   }
    
-   return weeklyTotals + (insights.length > 0 ? '<h3>Insights</h3>' + insights.map(i => `<div class="insight-item">${i}</div>`).join('') : '');
+   if (celebrations.length === 0 && suggestions.length === 0) {
+       html += '<p>Keep logging workouts to see personalized insights!</p>';
+   }
+   
+   return html;
 }
 
-function updateExerciseLists() {
-   const liftingExercises = [...new Set(workouts.filter(w => w.type === 'lifting').map(w => w.name))].sort();
-   const coreExercises = [...new Set(workouts.filter(w => w.type === 'core').map(w => w.name))].sort();
+window.showEditModal = function(workoutId) {
+   const workout = workouts.find(w => w.id === workoutId);
+   if (!workout) return;
    
-   const liftingSelect = document.getElementById('lifting-exercise-select');
-   liftingSelect.innerHTML = '<option value="">Select exercise...</option>' +
-       liftingExercises.map(e => `<option value="${e}">${e}</option>`).join('') +
-       '<option value="__new__">+ Add New Exercise</option>';
+   const modal = document.getElementById('edit-modal');
+   const form = document.getElementById('edit-form');
    
-   const coreSelect = document.getElementById('core-exercise-select');
-   coreSelect.innerHTML = '<option value="">Select exercise...</option>' +
-       coreExercises.map(e => `<option value="${e}">${e}</option>`).join('') +
-       '<option value="__new__">+ Add New Exercise</option>';
+   if (workout.type === 'lifting') {
+       form.innerHTML = `
+           <input type="text" id="edit-name" value="${workout.name}" placeholder="Exercise name">
+           <input type="number" id="edit-sets" value="${workout.sets}" placeholder="Sets">
+           <input type="number" id="edit-reps" value="${workout.reps}" placeholder="Reps">
+           <input type="number" id="edit-weight" value="${workout.weight}" placeholder="Weight">
+           <div class="effort-buttons">
+               <button class="effort-btn easy ${workout.effort === 'easy' ? 'selected' : ''}" data-effort="easy">Easy</button>
+               <button class="effort-btn medium ${workout.effort === 'medium' ? 'selected' : ''}" data-effort="medium">Medium</button>
+               <button class="effort-btn hard ${workout.effort === 'hard' ? 'selected' : ''}" data-effort="hard">Hard</button>
+           </div>
+           <button onclick="saveEdit('${workoutId}')" class="btn">Save Changes</button>
+       `;
+   } else if (workout.type === 'core') {
+       form.innerHTML = `
+           <input type="text" id="edit-name" value="${workout.name}" placeholder="Exercise name">
+           <input type="number" id="edit-sets" value="${workout.sets || ''}" placeholder="Sets (optional)">
+           <input type="number" id="edit-reps" value="${workout.reps || ''}" placeholder="Reps (optional)">
+           <input type="number" id="edit-time" value="${workout.time || ''}" placeholder="Time (optional)">
+           <div class="effort-buttons">
+               <button class="effort-btn easy ${workout.effort === 'easy' ? 'selected' : ''}" data-effort="easy">Easy</button>
+               <button class="effort-btn medium ${workout.effort === 'medium' ? 'selected' : ''}" data-effort="medium">Medium</button>
+               <button class="effort-btn hard ${workout.effort === 'hard' ? 'selected' : ''}" data-effort="hard">Hard</button>
+           </div>
+           <button onclick="saveEdit('${workoutId}')" class="btn">Save Changes</button>
+       `;
+   } else {
+       const distUnit = workout.cardioType === 'row' ? 'meters' : 'miles';
+       form.innerHTML = `
+           <input type="number" id="edit-time" value="${workout.time}" placeholder="Time (minutes)">
+           <input type="number" id="edit-distance" value="${workout.distance}" placeholder="Distance (${distUnit})" step="${workout.cardioType === 'row' ? '1' : '0.01'}">
+           ${workout.cardioType === 'run' ? `<input type="number" id="edit-elevation" value="${workout.elevation || ''}" placeholder="Elevation (ft, optional)">` : ''}
+           <button onclick="saveEdit('${workoutId}')" class="btn">Save Changes</button>
+       `;
+   }
+   
+   form.querySelectorAll('.effort-btn').forEach(btn => {
+       btn.addEventListener('click', () => {
+           form.querySelectorAll('.effort-btn').forEach(b => b.classList.remove('selected'));
+           btn.classList.add('selected');
+       });
+   });
+   
+   modal.style.display = 'block';
+};
+
+window.saveEdit = async function(workoutId) {
+   const workout = workouts.find(w => w.id === workoutId);
+   if (!workout) return;
+   
+   const updates = {};
+   
+   if (workout.type === 'lifting') {
+       updates.name = document.getElementById('edit-name').value;
+       updates.sets = parseInt(document.getElementById('edit-sets').value) || 0;
+       updates.reps = parseInt(document.getElementById('edit-reps').value) || 0;
+       updates.weight = parseInt(document.getElementById('edit-weight').value) || 0;
+       const selectedBtn = document.querySelector('#edit-form .effort-btn.selected');
+       updates.effort = selectedBtn ? selectedBtn.dataset.effort : 'medium';
+   } else if (workout.type === 'core') {
+       updates.name = document.getElementById('edit-name').value;
+       const sets = parseInt(document.getElementById('edit-sets').value) || 0;
+       const reps = parseInt(document.getElementById('edit-reps').value) || 0;
+       const time = parseInt(document.getElementById('edit-time').value) || 0;
+       if (sets > 0) updates.sets = sets;
+       if (reps > 0) updates.reps = reps;
+       if (time > 0) updates.time = time;
+       const selectedBtn = document.querySelector('#edit-form .effort-btn.selected');
+       updates.effort = selectedBtn ? selectedBtn.dataset.effort : 'medium';
+   } else {
+       updates.time = parseInt(document.getElementById('edit-time').value) || 0;
+       updates.distance = workout.cardioType === 'row' ? 
+           parseInt(document.getElementById('edit-distance').value) || 0 :
+           parseFloat(document.getElementById('edit-distance').value) || 0;
+       if (workout.cardioType === 'run') {
+           const elevation = parseInt(document.getElementById('edit-elevation').value) || 0;
+           if (elevation > 0) updates.elevation = elevation;
+       }
+   }
+   
+   await updateDoc(doc(db, 'workouts', workoutId), updates);
+   document.getElementById('edit-modal').style.display = 'none';
+};
+
+window.deleteWorkout = async function(workoutId) {
+   if (confirm('Delete this workout?')) {
+       await updateDoc(doc(db, 'workouts', workoutId), { is_deleted: 'Y' });
+   }
+};
+
+document.querySelector('.close').addEventListener('click', () => {
+   document.getElementById('edit-modal').style.display = 'none';
+});
+
+window.addEventListener('click', (e) => {
+   const modal = document.getElementById('edit-modal');
+   if (e.target === modal) {
+       modal.style.display = 'none';
+   }
+});
+
+if ('serviceWorker' in navigator) {
+   navigator.serviceWorker.register('sw.js');
 }
