@@ -21,6 +21,8 @@ let workouts = [];
 let editingId = null;
 let currentUser = null;
 let unsubscribe = null;
+let currentMetric = 'weight';
+let currentRange = 'daily';
 
 onAuthStateChanged(auth, (user) => {
    if (user) {
@@ -88,6 +90,15 @@ document.querySelectorAll('.type-btn').forEach(btn => {
        document.getElementById('lifting-form').classList.toggle('hidden', btn.dataset.type !== 'lifting');
        document.getElementById('core-form').classList.toggle('hidden', btn.dataset.type !== 'core');
        document.getElementById('cardio-form').classList.toggle('hidden', btn.dataset.type !== 'cardio');
+   });
+});
+
+document.querySelectorAll('[data-metric]').forEach(btn => {
+   btn.addEventListener('click', () => {
+       document.querySelectorAll('[data-metric]').forEach(b => b.classList.remove('active'));
+       btn.classList.add('active');
+       currentMetric = btn.dataset.metric;
+       renderTrends();
    });
 });
 
@@ -468,13 +479,29 @@ function renderHistory() {
    }).join('');
 }
 
-function renderTrends() {
-   const canvas = document.getElementById('chart');
-   const ctx = canvas.getContext('2d');
-   canvas.width = canvas.offsetWidth;
-   canvas.height = 300;
-   
+function getWeekStart(date) {
+   const d = new Date(date + 'T12:00:00');
+   const day = d.getDay();
+   const diff = d.getDate() - day;
+   return new Date(d.setDate(diff)).toLocaleDateString('en-CA');
+}
+
+function getMonthKey(date) {
+   const d = new Date(date + 'T12:00:00');
+   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function formatMonthLabel(monthKey) {
+   const [year, month] = monthKey.split('-');
+   const d = new Date(year, month - 1);
+   return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+}
+
+function aggregateData() {
    const byDate = {};
+   const byWeek = {};
+   const byMonth = {};
+   
    workouts.forEach(w => {
        if (!byDate[w.date]) byDate[w.date] = { weight: 0, distance: 0 };
        if (w.type === 'lifting') byDate[w.date].weight += w.sets * w.reps * w.weight;
@@ -482,39 +509,106 @@ function renderTrends() {
            const distInMiles = w.cardioType === 'row' ? w.distance / 1609.34 : w.distance;
            byDate[w.date].distance += distInMiles;
        }
+       
+       const weekStart = getWeekStart(w.date);
+       if (!byWeek[weekStart]) byWeek[weekStart] = { weight: 0, distance: 0 };
+       if (w.type === 'lifting') byWeek[weekStart].weight += w.sets * w.reps * w.weight;
+       if (w.type === 'cardio') {
+           const distInMiles = w.cardioType === 'row' ? w.distance / 1609.34 : w.distance;
+           byWeek[weekStart].distance += distInMiles;
+       }
+       
+       const monthKey = getMonthKey(w.date);
+       if (!byMonth[monthKey]) byMonth[monthKey] = { weight: 0, distance: 0 };
+       if (w.type === 'lifting') byMonth[monthKey].weight += w.sets * w.reps * w.weight;
+       if (w.type === 'cardio') {
+           const distInMiles = w.cardioType === 'row' ? w.distance / 1609.34 : w.distance;
+           byMonth[monthKey].distance += distInMiles;
+       }
    });
    
-   const dates = Object.keys(byDate).sort();
-   if (dates.length === 0) {
+   return { byDate, byWeek, byMonth };
+}
+
+function updateTimeRangeToggles() {
+   const { byDate, byWeek, byMonth } = aggregateData();
+   const weekCount = Object.keys(byWeek).length;
+   const monthCount = Object.keys(byMonth).length;
+   
+   const container = document.getElementById('time-range-toggles');
+   let html = '<button class="toggle-btn active" data-range="daily">Daily</button>';
+   
+   if (weekCount >= 6) {
+       html += '<button class="toggle-btn" data-range="weekly">Weekly</button>';
+   }
+   
+   if (monthCount >= 5) {
+       html += '<button class="toggle-btn" data-range="monthly">Monthly</button>';
+   }
+   
+   container.innerHTML = html;
+   
+   container.querySelectorAll('[data-range]').forEach(btn => {
+       btn.addEventListener('click', () => {
+           container.querySelectorAll('[data-range]').forEach(b => b.classList.remove('active'));
+           btn.classList.add('active');
+           currentRange = btn.dataset.range;
+           renderTrends();
+       });
+   });
+}
+
+function renderTrends() {
+   updateTimeRangeToggles();
+   
+   const canvas = document.getElementById('chart');
+   const ctx = canvas.getContext('2d');
+   canvas.width = canvas.offsetWidth;
+   canvas.height = 300;
+   
+   const { byDate, byWeek, byMonth } = aggregateData();
+   
+   let data, labels;
+   if (currentRange === 'weekly') {
+       const weeks = Object.keys(byWeek).sort();
+       labels = weeks.map(w => new Date(w + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+       data = weeks.map(w => currentMetric === 'weight' ? byWeek[w].weight : byWeek[w].distance);
+   } else if (currentRange === 'monthly') {
+       const months = Object.keys(byMonth).sort();
+       labels = months.map(m => formatMonthLabel(m));
+       data = months.map(m => currentMetric === 'weight' ? byMonth[m].weight : byMonth[m].distance);
+   } else {
+       const dates = Object.keys(byDate).sort();
+       labels = dates.map(d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+       data = dates.map(d => currentMetric === 'weight' ? byDate[d].weight : byDate[d].distance);
+   }
+   
+   if (data.length === 0) {
        ctx.fillText('No data to display', canvas.width / 2 - 50, canvas.height / 2);
        document.getElementById('insights').innerHTML = '<p>Log workouts to see insights</p>';
        return;
    }
    
-   const weights = dates.map(d => byDate[d].weight);
-   const maxWeight = Math.max(...weights, 1);
+   const maxValue = Math.max(...data, 1);
    
    ctx.clearRect(0, 0, canvas.width, canvas.height);
    ctx.strokeStyle = '#007bff';
    ctx.lineWidth = 2;
    ctx.beginPath();
    
-   dates.forEach((date, i) => {
-       const x = (i / (dates.length - 1 || 1)) * (canvas.width - 40) + 20;
-       const y = canvas.height - 40 - (weights[i] / maxWeight) * (canvas.height - 60);
+   data.forEach((value, i) => {
+       const x = (i / (data.length - 1 || 1)) * (canvas.width - 40) + 20;
+       const y = canvas.height - 40 - (value / maxValue) * (canvas.height - 60);
        if (i === 0) ctx.moveTo(x, y);
        else ctx.lineTo(x, y);
    });
    ctx.stroke();
    
    const insights = generateInsights();
-   document.getElementById('insights').innerHTML = '<h3>Insights</h3>' + insights.map(i => 
-       `<div class="insight-item">${i}</div>`
-   ).join('');
+   document.getElementById('insights').innerHTML = insights;
 }
 
 function generateInsights() {
-   const insights = [];
    const liftingByExercise = {};
    const coreByExercise = {};
    
@@ -528,33 +622,60 @@ function generateInsights() {
        coreByExercise[w.name].push(w);
    });
    
+   const insights = [];
+   
    Object.keys(liftingByExercise).forEach(exercise => {
        const exercises = liftingByExercise[exercise].sort((a, b) => a.timestamp - b.timestamp);
-       const recent = exercises.slice(-5);
-       const easyCount = recent.filter(e => e.effort === 'easy').length;
+       const recent20 = exercises.slice(-20);
+       const maxWeight = Math.max(...recent20.map(e => e.weight));
+       const maxWeightWorkouts = recent20.filter(e => e.weight === maxWeight);
+       const recent25 = exercises.slice(-25);
+       const maxWeightIn25 = recent25.filter(e => e.weight === maxWeight);
+       const last5AtMax = maxWeightIn25.slice(-5);
        
-       if (easyCount >= 3) {
-           insights.push(`<span class="suggestion">💪 Consider increasing weight for ${exercise}</span> - You've had ${easyCount} easy sessions recently`);
+       if (last5AtMax.length === 5 && last5AtMax.every(e => e.effort === 'easy')) {
+           insights.push(`<span class="suggestion">💪 Consider increasing weight for ${exercise} to ${maxWeight + 5}lbs</span> - Last 5 sessions at ${maxWeight}lbs were all easy`);
        }
        
-       if (exercises.length >= 2) {
-           const latest = exercises[exercises.length - 1];
-           const previous = exercises[exercises.length - 2];
-           if (latest.weight > previous.weight) {
-               insights.push(`🎉 Progress on ${exercise}! Up from ${previous.weight}lbs to ${latest.weight}lbs`);
-           }
+       const last10 = exercises.slice(-10);
+       const maxInLast10 = Math.max(...last10.map(e => e.weight));
+       const latest = exercises[exercises.length - 1];
+       if (latest.weight === maxInLast10 && last10.filter(e => e.weight === maxInLast10).length === 1) {
+           insights.push(`🎉 New record for ${exercise}! ${latest.weight}lbs is your highest in the last 10 sessions`);
        }
    });
    
    Object.keys(coreByExercise).forEach(exercise => {
        const exercises = coreByExercise[exercise].sort((a, b) => a.timestamp - b.timestamp);
-       const recent = exercises.slice(-5);
-       const easyCount = recent.filter(e => e.effort === 'easy').length;
+       const recent25 = exercises.slice(-25);
+       const last5 = recent25.slice(-5);
        
-       if (easyCount >= 3) {
-           insights.push(`<span class="suggestion">💪 ${exercise} getting easier</span> - Consider increasing difficulty`);
+       if (last5.length === 5 && last5.every(e => e.effort === 'easy')) {
+           insights.push(`<span class="suggestion">💪 ${exercise} getting easier</span> - Last 5 sessions were all easy, consider increasing difficulty`);
        }
    });
+   
+   const today = new Date();
+   const currentWeekStart = getWeekStart(new Date().toLocaleDateString('en-CA'));
+   const lastWeekStart = new Date(new Date(currentWeekStart + 'T12:00:00').getTime() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-CA');
+   
+   const currentWeekWorkouts = workouts.filter(w => getWeekStart(w.date) === currentWeekStart);
+   const lastWeekWorkouts = workouts.filter(w => getWeekStart(w.date) === lastWeekStart);
+   
+   const currentWeekWeight = currentWeekWorkouts.filter(w => w.type === 'lifting').reduce((sum, w) => sum + w.sets * w.reps * w.weight, 0);
+   const lastWeekWeight = lastWeekWorkouts.filter(w => w.type === 'lifting').reduce((sum, w) => sum + w.sets * w.reps * w.weight, 0);
+   
+   const currentWeekDistance = currentWeekWorkouts.filter(w => w.type === 'cardio').reduce((sum, w) => {
+       const distInMiles = w.cardioType === 'row' ? w.distance / 1609.34 : w.distance;
+       return sum + distInMiles;
+   }, 0);
+   const lastWeekDistance = lastWeekWorkouts.filter(w => w.type === 'cardio').reduce((sum, w) => {
+       const distInMiles = w.cardioType === 'row' ? w.distance / 1609.34 : w.distance;
+       return sum + distInMiles;
+   }, 0);
+   
+   const currentWeekCoreTime = currentWeekWorkouts.filter(w => w.type === 'core' && w.time).reduce((sum, w) => sum + w.time, 0);
+   const lastWeekCoreTime = lastWeekWorkouts.filter(w => w.type === 'core' && w.time).reduce((sum, w) => sum + w.time, 0);
    
    const totalWeight = workouts.filter(w => w.type === 'lifting').reduce((sum, w) => sum + w.sets * w.reps * w.weight, 0);
    const totalDistance = workouts.filter(w => w.type === 'cardio').reduce((sum, w) => {
@@ -563,13 +684,16 @@ function generateInsights() {
    }, 0);
    const totalCoreTime = workouts.filter(w => w.type === 'core' && w.time).reduce((sum, w) => sum + w.time, 0);
    
-   insights.push(`📊 Total weight lifted: ${totalWeight.toLocaleString()}lbs`);
-   insights.push(`🏃 Total distance: ${totalDistance.toFixed(1)}mi`);
-   if (totalCoreTime > 0) {
-       insights.push(`⏱️ Total core time: ${Math.floor(totalCoreTime / 60)}min ${totalCoreTime % 60}s`);
-   }
+   const weeklyTotals = `
+       <div class="weekly-totals">
+           <h3>Weekly Totals</h3>
+           <div>Weight: ${currentWeekWeight.toLocaleString()}lbs (Prev Wk: ${lastWeekWeight.toLocaleString()}lbs) (Lifetime: ${totalWeight.toLocaleString()}lbs)</div>
+           <div>Distance: ${currentWeekDistance.toFixed(1)}mi (Prev Wk: ${lastWeekDistance.toFixed(1)}mi) (Lifetime: ${totalDistance.toFixed(1)}mi)</div>
+           <div>Core Time: ${Math.floor(currentWeekCoreTime / 60)}min (Prev Wk: ${Math.floor(lastWeekCoreTime / 60)}min) (Lifetime: ${Math.floor(totalCoreTime / 60)}min)</div>
+       </div>
+   `;
    
-   return insights.length > 0 ? insights : ['Keep logging workouts to see insights!'];
+   return weeklyTotals + (insights.length > 0 ? '<h3>Insights</h3>' + insights.map(i => `<div class="insight-item">${i}</div>`).join('') : '');
 }
 
 function updateExerciseLists() {
