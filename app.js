@@ -590,19 +590,60 @@ function renderTrends() {
    }
    
    const maxValue = Math.max(...data, 1);
+   const padding = 50;
+   const chartWidth = canvas.width - padding * 2;
+   const chartHeight = canvas.height - padding * 2;
    
    ctx.clearRect(0, 0, canvas.width, canvas.height);
+   
+   ctx.strokeStyle = '#e0e0e0';
+   ctx.lineWidth = 1;
+   for (let i = 0; i <= 5; i++) {
+       const y = padding + (chartHeight / 5) * i;
+       ctx.beginPath();
+       ctx.moveTo(padding, y);
+       ctx.lineTo(canvas.width - padding, y);
+       ctx.stroke();
+       
+       const value = maxValue - (maxValue / 5) * i;
+       ctx.fillStyle = '#666';
+       ctx.font = '12px sans-serif';
+       ctx.textAlign = 'right';
+       ctx.fillText(Math.round(value), padding - 5, y + 4);
+   }
+   
    ctx.strokeStyle = '#007bff';
-   ctx.lineWidth = 2;
+   ctx.lineWidth = 3;
    ctx.beginPath();
    
    data.forEach((value, i) => {
-       const x = (i / (data.length - 1 || 1)) * (canvas.width - 40) + 20;
-       const y = canvas.height - 40 - (value / maxValue) * (canvas.height - 60);
+       const x = padding + (i / (data.length - 1 || 1)) * chartWidth;
+       const y = padding + chartHeight - (value / maxValue) * chartHeight;
        if (i === 0) ctx.moveTo(x, y);
        else ctx.lineTo(x, y);
+       
+       ctx.fillStyle = '#007bff';
+       ctx.beginPath();
+       ctx.arc(x, y, 4, 0, Math.PI * 2);
+       ctx.fill();
    });
    ctx.stroke();
+   
+   ctx.fillStyle = '#666';
+   ctx.font = '11px sans-serif';
+   ctx.textAlign = 'center';
+   labels.forEach((label, i) => {
+       const x = padding + (i / (data.length - 1 || 1)) * chartWidth;
+       ctx.fillText(label, x, canvas.height - 10);
+   });
+   
+   const unit = currentMetric === 'weight' ? 'lbs' : 'mi';
+   ctx.save();
+   ctx.translate(15, canvas.height / 2);
+   ctx.rotate(-Math.PI / 2);
+   ctx.textAlign = 'center';
+   ctx.fillText(unit, 0, 0);
+   ctx.restore();
    
    const insights = generateInsights();
    document.getElementById('insights').innerHTML = insights;
