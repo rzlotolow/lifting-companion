@@ -333,6 +333,7 @@ function updateExerciseLists() {
        '<option value="__new__">+ Add New Exercise</option>';
 }
 
+
 function renderToday() {
    const today = new Date().toLocaleDateString('en-CA');
    const todayWorkouts = workouts.filter(w => w.date === today);
@@ -560,7 +561,10 @@ function renderTrends() {
    let data, labels;
    if (currentRange === 'weekly') {
        const weeks = Object.keys(byWeek).sort();
-       labels = weeks.map(w => new Date(w + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+       labels = weeks.map(w => {
+           const date = new Date(w + 'T12:00:00');
+           return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear().toString().slice(-2)}`;
+       });
        data = weeks.map(w => currentMetric === 'weight' ? byWeek[w].weight : byWeek[w].distance);
    } else if (currentRange === 'monthly') {
        const months = Object.keys(byMonth).sort();
@@ -568,7 +572,10 @@ function renderTrends() {
        data = months.map(m => currentMetric === 'weight' ? byMonth[m].weight : byMonth[m].distance);
    } else {
        const dates = Object.keys(byDate).sort();
-       labels = dates.map(d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+       labels = dates.map(d => {
+           const date = new Date(d + 'T12:00:00');
+           return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear().toString().slice(-2)}`;
+       });
        data = dates.map(d => currentMetric === 'weight' ? byDate[d].weight : byDate[d].distance);
    }
    
@@ -584,8 +591,9 @@ function renderTrends() {
    ctx.clearRect(0, 0, canvas.width, canvas.height);
    
    const padding = 60;
+   const bottomPadding = 80;
    const chartWidth = canvas.width - padding * 2;
-   const chartHeight = canvas.height - padding * 2;
+   const chartHeight = canvas.height - padding - bottomPadding;
    const maxValue = Math.max(...data, 1);
    
    ctx.strokeStyle = '#ddd';
@@ -633,15 +641,20 @@ function renderTrends() {
    }
    
    ctx.fillStyle = '#666';
-   ctx.font = '11px sans-serif';
-   ctx.textAlign = 'center';
+   ctx.font = '10px sans-serif';
+   ctx.textAlign = 'left';
    
    const maxLabels = Math.min(labels.length, 10);
    const step = Math.ceil(labels.length / maxLabels);
    
    for (let i = 0; i < labels.length; i += step) {
        const x = padding + (i / Math.max(data.length - 1, 1)) * chartWidth;
-       ctx.fillText(labels[i], x, canvas.height - 20);
+       
+       ctx.save();
+       ctx.translate(x, canvas.height - bottomPadding + 10);
+       ctx.rotate(-Math.PI / 2);
+       ctx.fillText(labels[i], 0, 0);
+       ctx.restore();
    }
    
    const unit = currentMetric === 'weight' ? 'lbs' : 'mi';
