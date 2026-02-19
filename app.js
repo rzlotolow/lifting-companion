@@ -651,7 +651,7 @@ function renderTrends() {
        const x = padding + (i / Math.max(data.length - 1, 1)) * chartWidth;
        
        ctx.save();
-       ctx.translate(x, canvas.height - bottomPadding + 20);
+       ctx.translate(x, canvas.height - bottomPadding + 40);
        ctx.rotate(-Math.PI / 2);
        ctx.fillText(labels[i], 0, 5);
        ctx.restore();
